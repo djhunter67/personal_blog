@@ -119,13 +119,21 @@ pub async fn register_user(
 
     match result {
         Ok(id) => {
+            tracing::warn!("Database save successful");
             tracing::warn!("Saving to the cache-layer");
             let cache_key = format!("user:auth:{}", body.0.email);
 
             let auth_data = LoginChecker::new(email, encrypted_pw.get());
 
             if let Ok(json_data) = serde_json::to_string(&auth_data) {
-                let mut redis_conn = establish_connection(redis.get_ref().clone());
+                let mut redis_conn = match establish_connection(redis.get_ref().clone()) {
+                    Ok(conn) => conn,
+                    Err(err) => {
+                        tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
+                        return HttpResponse::InternalServerError()
+                            .body(format!("Unable to procure the cache layer: {err:#?}"));
+                    }
+                };
                 // Debug log
                 tracing::warn!("the json data to be saved: {:#?}", json_data);
                 // Set the key in Redis

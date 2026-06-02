@@ -92,7 +92,14 @@ pub async fn login_user(
     // Check redis first
     tracing::info!("Checking the cache-layer");
     let cache_key = format!("user:auth:{useremail}");
-    let mut redis_conn = establish_connection(redis.get_ref().clone());
+    let mut redis_conn = match establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to procure the cache layer: {err:#?}"));
+        }
+    };
 
     let cached_user: Option<String> = match redis_conn.get(cache_key) {
         Ok(cached_user) => Some(cached_user),
@@ -139,13 +146,7 @@ pub async fn login_user(
 
     if user_auth.pw_verify(password.to_string()) {
         tracing::warn!("PASSWORD VERIFIED! -> True");
-        create_session(
-            &user_auth,
-            Arc::<r2d2::Pool<redis::Client>>::into_inner(redis.into_inner()).expect("No joy"),
-        )
-        .await;
-
-        return HttpResponse::Ok().body("Login successfully");
+        return create_session(&user_auth, redis_conn).await;
     }
 
     // THIS RETURN VAL IS TEMPORARY

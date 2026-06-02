@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
 use askama::Template;
 
@@ -45,20 +43,32 @@ struct ContactTemplate<'a> {
     user: &'a str,
 }
 
+#[allow(clippy::future_not_send)]
 #[get("/about")]
 pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
-    let session_id = match req.cookie("session_id") {
-        Some(cookie) => cookie.value().to_string(),
-        None => {
-            return HttpResponse::Unauthorized()
-                .body(format!("No session found: {:#?}", req.cookies().unwrap()));
+    tracing::info!("About page loading");
+    let session_id = if let Some(cookie) = req.cookie("session_id") {
+        cookie.value().to_string()
+    } else {
+        tracing::error!("User cookie not found: {req:#?}");
+        return HttpResponse::Unauthorized().body(format!(
+            "No session found: {:#?}",
+            req.cookies().expect("No cookies found")
+        ));
+    };
+
+    let mut red_conn = match establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to acquire the redis connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Cache layer error: {err:#?}"));
         }
     };
 
-    let mut red_conn = establish_connection(Arc::into_inner(redis.into_inner()).expect("no joy"));
-
+    tracing::info!("Creating the session key");
     let session_key = format!(
-        "{}:{}",
+        "{}{}",
         &settings::get()
             .expect("Unable to procure the app settings")
             .redis
@@ -66,12 +76,23 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         session_id
     );
 
-    let user = redis::cmd("GET")
+    tracing::info!("Searching for the session key: {session_key}");
+    let user = match redis::cmd("GET")
         .arg(&session_key)
-        .query::<Option<String>>(&mut red_conn);
+        .query::<Option<String>>(&mut red_conn)
+    {
+        Ok(result) => result,
+        Err(err) => {
+            tracing::error!("Error accessing the cache layer: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to acquire the cache layer: {err:#?}"));
+        }
+    };
 
-    match user {
-        Ok(Some(email)) => {
+    tracing::warn!("The session id: {session_key}");
+    user.map_or_else(
+        || HttpResponse::InternalServerError().body("No user data found"),
+        |email| {
             let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
             let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";
             let template = AboutTemplate {
@@ -85,12 +106,8 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
             HttpResponse::Ok()
                 .content_type(ContentType::html())
                 .body(template)
-        }
-        Ok(None) => HttpResponse::InternalServerError().body("No user data found"),
-        Err(err) => {
-            HttpResponse::InternalServerError().body(format!("No user data found: {:#?}", err))
-        }
-    }
+        },
+    )
 }
 
 #[get("/schedule")]

@@ -40,7 +40,7 @@ $light-yellow: hsl(60, 100%, 90%);
     &__top {
 	grid-column: 1 / -1;
 	grid-row: 1 / 2;
-	background-color: purple;
+	background-color: $light-gray;
 	// display: flex;
 	// flex-direction: row;
 	// flex-wrap: wrap;
@@ -58,7 +58,7 @@ $light-yellow: hsl(60, 100%, 90%);
 
 	    &__home {
 		background-color: white;
-		color: coral;
+		color: $light-red;
 		border: none;
 		border-radius: 5px;
 		padding: 8px 16px;
@@ -74,7 +74,7 @@ $light-yellow: hsl(60, 100%, 90%);
 	    
 	    &__login {
 		background-color: white;
-		color: coral;
+		color: $light-red;
 		border: none;
 		border-radius: 5px;
 		padding: 8px 16px;
@@ -90,7 +90,7 @@ $light-yellow: hsl(60, 100%, 90%);
 
 	    &__signup {
 		background-color: white;
-		color: coral;
+		color: $light-red;
 		border: transparent;
 		border-radius: 5px;
 		padding: 8px 16px;

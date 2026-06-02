@@ -7,23 +7,16 @@ use uuid::Uuid;
 
 use super::login::LoginChecker;
 
-pub async fn create_session(user: &LoginChecker, redis: r2d2::Pool<redis::Client>) -> HttpResponse {
+pub async fn create_session(
+    user: &LoginChecker,
+    mut redis: r2d2::PooledConnection<redis::Client>,
+) -> HttpResponse {
+    tracing::info!("Generating the cookie");
     // Generate a cryptographically strong, random session ID
     let session_id = Uuid::new_v4().to_string();
     let session_key = format!("session:{session_id}");
 
-    // Store the session ID -> Email mapping in Redis
-    // Use set_ex to define a TTL (e.g. 86400 seconds / 24 hours)
-    // This is critical to prevent memory exhaustion for small caches
-    let mut redis_conn = match redis.get() {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Cache layer error: {err:#?}");
-            return HttpResponse::InternalServerError().body("Cache-layer failure");
-        }
-    };
-
-    match redis_conn.set_ex(&session_key, user.get_email(), 86400) {
+    match redis.set_ex(&session_key, user.get_email(), 86400) {
         Ok(()) => (),
         Err(err) => {
             tracing::error!("Unable to set the session key into the cache layer: {err:#?}");
@@ -69,7 +62,9 @@ mod tests {
         let conn = r2d2::Pool::builder()
             .max_size(15)
             .build(get_local_redis_connection)
-            .expect("Failed to create Redis connection pool");
+            .expect("Failed to create Redis connection pool")
+            .get()
+            .unwrap();
 
         let email = "test_email@example.com";
         let user: LoginChecker = LoginChecker::new(email.to_string(), "test_password".to_string());
@@ -99,6 +94,8 @@ mod tests {
             &user,
             r2d2::Pool::builder()
                 .build(get_local_redis_connection)
+                .unwrap()
+                .get()
                 .unwrap(),
         )
         .await
@@ -127,6 +124,8 @@ mod tests {
             &user,
             r2d2::Pool::builder()
                 .build(get_local_redis_connection)
+                .unwrap()
+                .get()
                 .unwrap(),
         )
         .await;

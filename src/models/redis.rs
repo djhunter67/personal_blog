@@ -11,7 +11,10 @@ use tracing::instrument;
     skip(manager)
 )]
 /// # Returns
-///   - Returns a `Pool` of `redis::Client` to the redis db if successful
+///   - Returns a connection to the ``Redis`` database
+///
+/// # Errors
+///   - Returns an error if the connection cannot be established
 ///
 /// # Arguments
 ///   - `settings` - The settings for the application
@@ -20,9 +23,10 @@ use tracing::instrument;
 ///   - Panics if the pool cannot be created
 ///
 /// Initialize and return a connection to the ``Redis`` database.
-
-pub fn establish_connection(manager: r2d2::Pool<redis::Client>) -> PooledConnection<redis::Client> {
-    manager.get().expect("No Redis cache layer available")
+pub fn establish_connection(
+    manager: r2d2::Pool<redis::Client>,
+) -> Result<PooledConnection<redis::Client>, redis::RedisResult<String>> {
+    Ok(manager.get().expect("No Redis cache layer available"))
 }
 
 #[cfg(test)]
