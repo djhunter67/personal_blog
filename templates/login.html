@@ -1,0 +1,27 @@
+{% extends "base.html" %} {% block title %} {{ title }} {% endblock %} {% block head %} {% endblock %} {% block individual_page_contents %}
+
+<section id="login">
+  <h1>LOGIN</h1>
+  <div id="login__center">
+    <form id="user_login" hx-post="/v1/login_user" hx-target="#login__response" hx-swap="innerHTML">
+      <label for="email_input">EMAIL:</label>
+      <input type="text" id="login__center__username" name="email_input" autocomplete="on" placeholder="EMAIL" value="theuser@user.com"/>
+
+      <label for="password_input">PASSWORD:</label>
+      <input type="password" id="login__center__auth" name="password_input" autocomplete="on" placeholder="PASSWORD" value="thepassword"/>
+      <button type="submit">SUBMIT</button>
+    </form>
+  </div>
+  <div id="login__response">
+    <h4>Server Response</h4>
+    <div>
+      {% for (i, data) in content.iter().enumerate() %}
+      {{i}} -> {{ data }}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+
+{% call super() %} {% endblock %}
+

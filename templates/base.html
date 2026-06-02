@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>{% block title %}{{ title }} - My Site{% endblock %}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="icon" href="/static/favicon" type="image/x-icon" />
+    <link rel="stylesheet" type="text/css" href="/static/stylesheet">
+    <script  type="text/javascript" defer src="/static/htmx"></script>
+    <script  type="text/javascript" defer src="/static/response-targets"></script>
+    <script  type="text/javascript" defer src="/static/sse"></script>
+    <script  type="text/javascript" defer src="/static/action_script"></script>
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <div id="template_pages">
+      <header id="template_pages__top">
+	<nav id="template_pages__top__nav">
+	  <button
+	    id="template_pages__top__nav__home"
+	    hx-get="/"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    hx-trigger="click"
+	    >HOME
+	  </button>
+	  <button
+	    id="template_pages__top__nav__login"
+	    hx-get="/v1/login"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    hx-trigger="click"
+	    >
+	    LOGIN
+	  </button>
+	  <button
+	    id="template_pages__top__nav__signup"
+	    hx-get="/v1/register"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    hx-trigger="click"
+	    >
+	    REGISTER
+	  </button>
+	</nav>
+	<aside id="template_pages__top__logo">
+	  <img src="https://i.pravatar.cc/300" alt="Sunday Life Services logo" width="300px" height="350px">
+	</aside>
+	<aside id="template_pages__top__subject">
+	  <div id="template_pages__top__subject__first_word">
+	    <h1>HOME</h1><h3>BIRTHS</h3>
+	  </div>    
+	</aside>
+      </header>
+      {% block individual_page_contents %}
+      {% endblock %}
+      {% block error_contents %}
+      {% endblock %}
+    </div>
+  </body>
+</html>

@@ -1,0 +1,99 @@
+{% extends "base.html" %} {% block title %} {{ title }} {{ version  }} {% endblock %} {% block head %} {% endblock %} {% block individual_page_contents %}
+
+<div id="main">
+  <section id="main__paths">
+    <button
+      hx-get="/about"
+      hx-target="#main"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="click">
+      ABOUT
+    </button>
+    <button
+      hx-get="/schedule"
+      hx-target="#main"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="click">
+      SCHEDULE
+    </button>
+    <button
+      hx-get="/testimonials"
+      hx-target="#main"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-target="click">
+      TESTIMONIALS
+    </button>
+    <button
+      hx-get="/finances"
+      hx-target="#main"
+      hx-swap="innerHTML"
+      hx-push-url="true"
+      hx-trigger="click">
+      FINANCES
+    </button>
+  </section>
+  <section id="main__info_cards">
+    {% for (i,card) in content.iter().enumerate() %}
+    <div class="card">
+      <div class="card__text">
+	<p>
+	  {{ card }}
+	</p>	
+      </div>
+      <div class="card__image">
+	<img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image" height="350px" width="350px">
+      </div>
+    </div>
+    {% endfor %}
+  </section>
+</div>
+
+<footer>
+  <section id="footer_container">
+    <button
+      hx-get="/contact"
+      hx-target="#main"
+      hx-swap="outerHTML"
+      hx-push-url="true"
+      hx-trigger="click">
+      CONTACT
+    </button>
+    <button
+      hx-get="https://facebook.com"
+      hx-push-url="true"
+      hx-target="_blank"
+      hx-trigger="click">
+      FACEBOOK
+    </button>
+    <button
+      hx-get="https://x.com"
+      hx-push-url="true"
+      hx-target="_top"
+      hx-trigger="click">
+      TWITTER
+    </button>
+    <button
+      hx-get="https://instagram.com"
+      hx-push-url="true"
+      hx-target="_top"
+      hx-trigger="click">
+      INSTAGRAM
+    </button>
+    <button
+      hx-get="/about"
+      hx-push-url="true"
+      hx-target="#main"
+      hx-swap="outerHTML"
+      hx-trigger="click">
+      ABOUT
+    </button>
+  </section>
+  <aside id="footer_container__version">
+    V.{{ version }}
+  </aside>
+</footer>
+
+{% call super() %} {% endblock %}
