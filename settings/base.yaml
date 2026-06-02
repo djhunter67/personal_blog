@@ -3,14 +3,15 @@ application:
 
 mongo:
  uri: "mongodb://djhunter67:<password>"
- db: "sundayLife"
- collection: "test"
+ db: "personal_blog"
+ collection: "development"
  require_auth: true
  pool_size: 1
  connection_timeout: 1
 
 redis:
   uri: "redis://:<password>"
+  key: "blog:cache"
   pool_size: 1
   pool_max_open: 16
   pool_max_idle: 8

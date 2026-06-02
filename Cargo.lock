@@ -1922,6 +1922,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 
 [[package]]
+name = "personal_journal"
+version = "0.1.0"
+dependencies = [
+ "actix-files",
+ "actix-web",
+ "askama",
+ "base64 0.22.1",
+ "chacha20",
+ "config",
+ "dotenvy",
+ "futures",
+ "hex",
+ "mongodb",
+ "r2d2",
+ "r2d2_postgres",
+ "r2d2_sqlite",
+ "rand 0.10.1",
+ "redis",
+ "rstest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
 name = "pest"
 version = "2.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3361,34 +3389,6 @@ name = "webpki-roots"
 version = "0.25.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5f20c57d8d7db6d3b86154206ae5d8fba62dd39573114de97c2cb0578251f8e1"
-
-[[package]]
-name = "website_template"
-version = "0.1.0"
-dependencies = [
- "actix-files",
- "actix-web",
- "askama",
- "base64 0.22.1",
- "chacha20",
- "config",
- "dotenvy",
- "futures",
- "hex",
- "mongodb",
- "r2d2",
- "r2d2_postgres",
- "r2d2_sqlite",
- "rand 0.10.1",
- "redis",
- "rstest",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
 
 [[package]]
 name = "whoami"

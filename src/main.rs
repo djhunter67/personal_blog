@@ -1,6 +1,6 @@
+use personal_journal::{settings, startup::Application, telemetry};
 use std::io;
 use tracing::{error, info, warn};
-use website_template::{settings, startup::Application, telemetry};
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
