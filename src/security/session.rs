@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 use super::login::LoginChecker;
 
-async fn create_session(user: &LoginChecker, redis: r2d2::Pool<redis::Client>) -> HttpResponse {
+pub async fn create_session(user: &LoginChecker, redis: r2d2::Pool<redis::Client>) -> HttpResponse {
     // Generate a cryptographically strong, random session ID
     let session_id = Uuid::new_v4().to_string();
     let session_key = format!("session:{session_id}");

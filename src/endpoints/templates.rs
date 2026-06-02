@@ -10,6 +10,7 @@ pub struct IndexTemplate<'a> {
     pub title: &'a str,
     pub content: Vec<&'a str>,
     pub version: &'a str,
+    pub user: &'a str,
 }
 
 #[derive(Template)]

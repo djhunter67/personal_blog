@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use actix_web::{
     HttpResponse, Responder, get, post,
     web::{self, Data},
@@ -11,7 +13,7 @@ use tracing::{debug, instrument};
 use crate::{
     endpoints::register::RegisterUser,
     models::redis::establish_connection,
-    security::{login::LoginChecker, passworder::PassWorder},
+    security::{login::LoginChecker, passworder::PassWorder, session::create_session},
     settings,
 };
 
@@ -22,6 +24,7 @@ use crate::{
 struct LoginTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
+    user: &'a str,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -49,11 +52,13 @@ impl From<RegisterUser> for LoginUser {
 )]
 pub async fn login_template() -> HttpResponse {
     debug!("Login page loaded");
+
     let user_login: &str = "user_email";
     let user_password: &str = "super_duper_secret_password";
     let template = LoginTemplate {
         title: "Login",
         content: [user_login, user_password].to_vec(),
+        user: "logged in user",
     };
 
     let template = template.render().expect("Login page render error");
@@ -122,20 +127,24 @@ pub async fn login_user(
                 .collection,
         );
 
-        let user = match db.find_one(filter).await {
+        match db.find_one(filter).await {
             Ok(user) => bson::from_document::<LoginChecker>(user.expect("No joy"))
                 .expect("Unable to convert"),
             Err(err) => {
                 tracing::error!("No conversion possible from Document to LoginChecker: {err}");
                 LoginChecker::default()
             }
-        };
-
-        user
+        }
     };
 
     if user_auth.pw_verify(password.to_string()) {
         tracing::warn!("PASSWORD VERIFIED! -> True");
+        create_session(
+            &user_auth,
+            Arc::<r2d2::Pool<redis::Client>>::into_inner(redis.into_inner()).expect("No joy"),
+        )
+        .await;
+
         return HttpResponse::Ok().body("Login successfully");
     }
 

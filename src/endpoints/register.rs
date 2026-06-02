@@ -21,6 +21,7 @@ use crate::{
 struct RegisterTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
+    user: &'a str,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -53,6 +54,7 @@ pub async fn register_template() -> HttpResponse {
     let template = RegisterTemplate {
         title: "Registration",
         content: [user_name, user_password_1, user_password_2].to_vec(),
+        user: "logged in user",
     };
 
     let template = template.render().expect("About page render error");
