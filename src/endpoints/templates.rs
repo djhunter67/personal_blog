@@ -35,7 +35,7 @@ impl<'a> ErrorPage<'a> {
 
 #[get("/favicon")]
 #[instrument(name = "Serving favicon", level = "info", target = "portfolio_site")]
-async fn favicon() -> Result<NamedFile, actix_web::Error> {
+pub async fn favicon() -> Result<NamedFile, actix_web::Error> {
     info!("Serving favicon");
     let filename = "head_shot.ico";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -53,7 +53,7 @@ async fn favicon() -> Result<NamedFile, actix_web::Error> {
 
 #[get("/logomain")]
 #[instrument(name = "Serving logo", level = "info", target = "portfolio_site")]
-async fn logomain() -> Result<NamedFile, actix_web::Error> {
+pub async fn logomain() -> Result<NamedFile, actix_web::Error> {
     info!("Serving logo");
     let filename = "logomain.jpeg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -71,7 +71,7 @@ async fn logomain() -> Result<NamedFile, actix_web::Error> {
 
 #[get("/stylesheet")]
 #[instrument(name = "Serving stylesheet", level = "info", target = "portfolio_site")]
-async fn stylesheet() -> impl Responder {
+pub async fn stylesheet() -> impl Responder {
     info!("Serving stylesheet");
     let file = include_str!("../../static/css/style.css");
     HttpResponse::Ok().content_type("text/css").body(file)
@@ -79,7 +79,7 @@ async fn stylesheet() -> impl Responder {
 
 #[get("/style.css.map")]
 #[instrument(name = "Serving source map", level = "info", target = "portfolio_site")]
-async fn source_map() -> impl Responder {
+pub async fn source_map() -> impl Responder {
     info!("Serving source map");
     let file = include_str!("../../static/css/style.css.map");
     HttpResponse::Ok()
@@ -93,7 +93,7 @@ async fn source_map() -> impl Responder {
     level = "info",
     target = "portfolio_site"
 )]
-async fn htmx() -> Result<NamedFile, actix_web::Error> {
+pub async fn htmx() -> Result<NamedFile, actix_web::Error> {
     info!("Serving htmx.min.js");
 
     let filename = "htmx.min.js";
@@ -113,7 +113,7 @@ async fn htmx() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn response_targets() -> Result<NamedFile, actix_web::Error> {
+pub async fn response_targets() -> Result<NamedFile, actix_web::Error> {
     info!("Serving response-targets.js");
 
     let filename = "response-targets.js";
@@ -129,7 +129,7 @@ async fn response_targets() -> Result<NamedFile, actix_web::Error> {
 
 #[get("/sse")]
 #[instrument(name = "Serving sse.js", level = "info", target = "portfolio_site")]
-async fn sse() -> Result<NamedFile, actix_web::Error> {
+pub async fn sse() -> Result<NamedFile, actix_web::Error> {
     info!("Serving sse.js");
 
     let filename = "sse.js";
@@ -149,7 +149,7 @@ async fn sse() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn action_script() -> Result<NamedFile, actix_web::Error> {
+pub async fn action_script() -> Result<NamedFile, actix_web::Error> {
     info!("Serving action_script.js");
 
     let filename = "action_script.js";
@@ -170,7 +170,7 @@ async fn action_script() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
+pub async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
     info!("Serving prof_headshot.jpg");
 
     let filename = "head_shot.png";
@@ -191,7 +191,7 @@ async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
+pub async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
     info!("Serving usmc_patrolling.jpg");
 
     let filename = "usmc_patrolling.jpg";
@@ -212,7 +212,7 @@ async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn spinner() -> Result<NamedFile, actix_web::Error> {
+pub async fn spinner() -> Result<NamedFile, actix_web::Error> {
     info!("Serving spinner.jpg");
 
     let filename = "spinner.gif";
@@ -229,7 +229,7 @@ async fn spinner() -> Result<NamedFile, actix_web::Error> {
 
 #[get("/github")]
 #[instrument(name = "Serving github.svg", level = "info", target = "portfolio_site")]
-async fn github() -> Result<NamedFile, actix_web::Error> {
+pub async fn github() -> Result<NamedFile, actix_web::Error> {
     info!("Serving github.webp");
 
     let filename = "github.webp";
@@ -250,7 +250,7 @@ async fn github() -> Result<NamedFile, actix_web::Error> {
     level = "info",
     target = "portfolio_site"
 )]
-async fn linkedin() -> Result<NamedFile, actix_web::Error> {
+pub async fn linkedin() -> Result<NamedFile, actix_web::Error> {
     info!("Serving linkedin.svg");
 
     let filename = "linkedIn.svg";

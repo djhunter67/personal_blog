@@ -9,7 +9,6 @@ pub struct Settings {
     pub application: Application,
     pub debug: bool,
     pub mongo: Mongo,
-    pub sqlite: Sqlite,
     pub redis: Redis,
     pub secret: Secret,
     pub frontend_url: String,
@@ -42,14 +41,6 @@ pub struct Mongo {
     pub require_auth: bool,
     pub pool_size: u8,
     pub connection_timeout: u8,
-}
-
-#[derive(Deserialize, Clone, Debug)]
-pub struct Sqlite {
-    pub path: String,
-    pub schema: String,
-    pub pool_size: u32,
-    pub connection_timeout: u64,
 }
 
 /// Application's specific settings to expose `port`,

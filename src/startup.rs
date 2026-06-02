@@ -5,7 +5,6 @@ use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer, http::KeepAlive, middleware};
 use mongodb::Database;
 use r2d2::ManageConnection;
-use r2d2_sqlite::SqliteConnectionManager;
 use std::net;
 use std::time::Duration;
 use tracing::{debug, info, instrument, warn};
@@ -22,7 +21,6 @@ async fn run(
     listener: std::net::TcpListener,
     settings: Settings,
 ) -> Result<actix_web::dev::Server, std::io::Error> {
-    let sqlite_pool: SqliteConnectionManager = SqliteConnectionManager::file(settings.sqlite.path);
     let redis_pool: redis::Client = redis::Client::open(settings.redis.uri.clone())
         .expect("Failed to create Redis connection redis_pool");
     let redis_pool: r2d2::Pool<redis::Client> = r2d2::Pool::builder()
@@ -47,7 +45,6 @@ async fn run(
 
     // Connect to the MongoDB database
     let db_redis = Data::new(redis_pool);
-    let db_sqlite = Data::new(sqlite_pool);
     let db_mongo = Data::new(mongo_pool);
     // info!("Processed DB connection pool for distribution");
 
@@ -57,7 +54,6 @@ async fn run(
             .wrap(middleware::Compress::default())
             .wrap(middleware::DefaultHeaders::new().add(("X-Version", env!("CARGO_PKG_VERSION")))) // Security consideration
             .app_data(db_redis.clone())
-            .app_data(db_sqlite.clone())
             .app_data(db_mongo.clone())
             .service(
                 web::scope("/static")
