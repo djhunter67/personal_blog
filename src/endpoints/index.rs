@@ -1,6 +1,6 @@
 use std::task::Poll;
 
-use crate::{models::redis::establish_connection, settings};
+use crate::{models::redis_conf::establish_connection, settings};
 
 use super::templates::IndexTemplate;
 use actix_web::{
@@ -72,7 +72,7 @@ pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
 
     tracing::warn!("The session id: {session_key}");
     user.map_or_else(
-        || HttpResponse::InternalServerError().body("No user data found"),
+        || HttpResponse::InternalServerError().body("No user data cached"),
         |email| {
 
 	    let version: &str = env!("CARGO_PKG_VERSION");

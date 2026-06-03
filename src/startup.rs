@@ -1,9 +1,8 @@
 use crate::endpoints::{self, health, index, login, register, templates};
 use crate::models::r2d2_mongodb::client_manager::MongoClientManager;
-use crate::settings::{self, Settings};
+use crate::settings::Settings;
 use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer, http::KeepAlive, middleware};
-use mongodb::Database;
 use r2d2::ManageConnection;
 use std::net;
 use std::time::Duration;
@@ -50,23 +49,23 @@ async fn run(
                 panic!("Application cannot start: {err:#?}")
             }
         };
-    let mongo_settings = match settings::get() {
-        Ok(settings) => settings,
-        Err(err) => {
-            tracing::error!("Unable to acquire database configurtation: {err:#?}");
-            panic!("Application cannot start: {err:#?}")
-        }
-    }
-    .mongo;
+    // let mongo_settings = match settings::get() {
+    //     Ok(settings) => settings,
+    //     Err(err) => {
+    //         tracing::error!("Unable to acquire database configurtation: {err:#?}");
+    //         panic!("Application cannot start: {err:#?}")
+    //     }
+    // }
+    // .mongo;
 
-    let mongo_pool: Database = match mongo_pool.connect() {
+    let mongo_pool: mongodb::Client = match mongo_pool.connect() {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to connect to the database: {err:#?}");
             panic!("Application cannot start: {err:#?}")
         }
-    }
-    .database(&mongo_settings.db);
+    };
+    // .database(&mongo_settings.db);
 
     // Connect to the MongoDB database
     let db_redis = Data::new(redis_pool);

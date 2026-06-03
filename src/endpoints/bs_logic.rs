@@ -1,7 +1,10 @@
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
 use askama::Template;
 
-use crate::{models::redis::establish_connection, settings};
+use crate::{
+    models::redis_conf::{self},
+    settings,
+};
 
 #[derive(Template)]
 #[template(path = "about.html")]
@@ -57,7 +60,7 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         ));
     };
 
-    let mut red_conn = match establish_connection(redis.get_ref().clone()) {
+    let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the redis connection: {err:#?}");

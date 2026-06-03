@@ -1,16 +1,15 @@
 //! Initialize and return a connection to the ``MongoDb`` database.
 
-use crate::settings;
-use actix_web::web::Data;
-use mongodb::{Client, Collection, bson::Document};
 use tracing::{info, instrument};
+
+use crate::settings;
 
 #[must_use]
 #[instrument(
     name = "Get Connection Pool for MongoDb",
     level = "info",
     target = "sundayLifeServices web app",
-    skip(settings, manager)
+    skip(manager)
 )]
 /// # Result
 ///  - `Ok(Database)` if the connection pool was successfully created
@@ -19,14 +18,13 @@ use tracing::{info, instrument};
 /// # Panics
 ///  - If the connection pool could not be created
 pub async fn establish_connection(
-    settings: &settings::Mongo,
-    manager: Data<Client>,
-) -> Collection<Document> {
+    manager: mongodb::Client,
+) -> Result<mongodb::Database, mongodb::error::Error> {
     info!("Get mongo connection pool");
-    manager
-        .into_inner()
-        .database(&settings.db)
-        .collection(&settings.collection)
+    Ok(manager.database(&settings::get().expect("setings error").mongo.db))
+    // .into_inner()
+    // .database(&settings.db)
+    // .collection(&settings.collection)
 }
 
 #[cfg(test)]
@@ -35,7 +33,7 @@ mod tests {
 
     use mongodb::{
         Collection,
-        bson::{Bson, Document, doc},
+        bson::{self, Bson, Document, doc},
     };
     use r2d2::ManageConnection;
     use rstest::rstest;
@@ -74,10 +72,16 @@ mod tests {
             .connect()
             .unwrap();
 
-        let pool = establish_connection(&settings::get().unwrap().mongo, Data::new(manager)).await;
+        let pool = establish_connection(manager).await;
 
         // Assert that a connection has been established
-        assert!(pool.estimated_document_count().await.is_err());
+        assert!(
+            pool.unwrap()
+                .collection::<bson::Document>("test")
+                .estimated_document_count()
+                .await
+                .is_err()
+        );
     }
 
     #[rstest]

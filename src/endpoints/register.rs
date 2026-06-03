@@ -3,13 +3,17 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
+use futures::TryStreamExt;
 use mongodb::bson::doc;
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
 
 use crate::{
-    models::redis::establish_connection,
+    models::{
+        mongo::{self},
+        redis_conf,
+    },
     security::{login::LoginChecker, passworder::PassWorder},
     settings,
 };
@@ -34,7 +38,7 @@ pub struct RegisterUser {
     password_2: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 struct RegistrationData {
     email: String,
     password_hash: String,
@@ -70,7 +74,7 @@ pub async fn register_template() -> HttpResponse {
     skip(body, mongo, redis)
 )]
 pub async fn register_user(
-    mongo: Data<mongodb::Database>,
+    mongo: Data<mongodb::Client>,
     redis: Data<r2d2::Pool<redis::Client>>,
     body: web::Form<RegisterUser>,
 ) -> HttpResponse {
@@ -93,6 +97,45 @@ pub async fn register_user(
         return HttpResponse::NotAcceptable().json("Passwords do not match");
     }
 
+    let mongo_settings: settings::Mongo = match settings::get() {
+        Ok(settings) => settings.mongo,
+        Err(err) => {
+            tracing::error!("Unable to procure the application settings: {err:#?}");
+            return HttpResponse::InternalServerError().body(format!("Settings error: {err:#?}"));
+        }
+    };
+
+    let db: mongodb::Collection<RegistrationData> =
+        match mongo::establish_connection(mongo.get_ref().clone()).await {
+            Ok(db) => db,
+            Err(err) => {
+                tracing::error!("Unable to procure the database: {err:#?}");
+                return HttpResponse::InternalServerError()
+                    .body(format!("Unable to procure the database: {err:#?}"));
+            }
+        }
+        .collection(&mongo_settings.collection);
+
+    // Check if the user exists
+    let mut existing_query = db
+        .find(doc! {
+        "email": &email
+        })
+        .limit(1)
+        .await
+        .expect("");
+
+    let result: Option<RegistrationData> = existing_query
+        .try_next()
+        .await
+        .expect("no registered data found");
+
+    if let Some(_data) = result {
+        tracing::error!("Email already exists");
+        return HttpResponse::Conflict().body("Email already exists");
+    }
+    tracing::info!("Email checking and no matching email found");
+
     let encrypted_pw: PassWorder = PassWorder::new(password.to_string())
         .encrypt()
         .salt()
@@ -100,17 +143,9 @@ pub async fn register_user(
 
     let (salt, pw, _) = encrypted_pw.deconstruct();
 
-    // Save the user to Mongodb
-    let db: mongodb::Collection<RegistrationData> = mongo.collection(
-        &settings::get()
-            .expect("Unable to procure the settings")
-            .mongo
-            .collection,
-    );
-
     // Save the user to the database
     let result = db
-        .insert_one(RegistrationData {
+        .insert_one(&RegistrationData {
             email: email.clone(),
             password_hash: pw,
             password_salt: salt,
@@ -119,14 +154,15 @@ pub async fn register_user(
 
     match result {
         Ok(id) => {
-            tracing::warn!("Database save successful");
-            tracing::warn!("Saving to the cache-layer");
+            tracing::info!("Database save successful");
+            tracing::info!("Saving to the cache-layer");
             let cache_key = format!("user:auth:{}", body.0.email);
 
             let auth_data = LoginChecker::new(email, encrypted_pw.get());
 
             if let Ok(json_data) = serde_json::to_string(&auth_data) {
-                let mut redis_conn = match establish_connection(redis.get_ref().clone()) {
+                let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone())
+                {
                     Ok(conn) => conn,
                     Err(err) => {
                         tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
@@ -135,7 +171,7 @@ pub async fn register_user(
                     }
                 };
                 // Debug log
-                tracing::warn!("the json data to be saved: {:#?}", json_data);
+                // tracing::info!("the json data to be saved: {:#?}", json_data);
                 // Set the key in Redis
                 // let _: redis::RedisResult<()> = redis_conn.set_ex(&cache_key, json_data, 3600);
                 match redis_conn.set_ex(&cache_key, json_data, 3600) {

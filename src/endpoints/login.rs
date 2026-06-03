@@ -10,7 +10,7 @@ use tracing::{debug, instrument};
 
 use crate::{
     endpoints::register::RegisterUser,
-    models::redis::establish_connection,
+    models::redis_conf,
     security::{login::LoginChecker, passworder::PassWorder, session::create_session},
     settings,
 };
@@ -89,7 +89,7 @@ pub async fn login_user(
     // Check redis first
     tracing::info!("Checking the cache-layer");
     let cache_key = format!("user:auth:{useremail}");
-    let mut redis_conn = match establish_connection(redis.get_ref().clone()) {
+    let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
