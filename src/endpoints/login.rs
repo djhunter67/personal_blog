@@ -3,14 +3,13 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
-use mongodb::bson::{self};
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 use crate::{
     endpoints::register::RegisterUser,
-    models::redis_conf,
+    models::{mongo, redis_conf},
     security::{login::LoginChecker, passworder::PassWorder, session::create_session},
     settings,
 };
@@ -72,7 +71,7 @@ pub async fn login_template() -> HttpResponse {
     skip(body, mongo, redis)
 )]
 pub async fn login_user(
-    mongo: Data<mongodb::Database>,
+    mongo: Data<mongodb::Client>,
     redis: Data<r2d2::Pool<redis::Client>>,
     body: web::Form<LoginUser>,
 ) -> impl Responder {
@@ -124,16 +123,44 @@ pub async fn login_user(
         tracing::error!("cache-miss");
 
         // Mongodb check of the user
-        let db: mongodb::Collection<bson::Document> = mongo.collection(
-            &settings::get()
-                .expect("Unable to acquire settings")
+        // let db: mongodb::Collection<bson::Document> = mongo.collection(
+        //     &settings::get()
+        //         .expect("Unable to acquire settings")
+        //         .mongo
+        //         .collection,
+        // );
+        let db: mongodb::Collection<LoginChecker> =
+            match mongo::establish_connection(mongo.get_ref().clone()).await {
+                Ok(db) => db,
+                Err(err) => {
+                    tracing::error!("Unable to procure the database: {err:#?}");
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Unable to procure the database: {err:#?}"));
+                }
+            }
+            .collection(
+                &match settings::get() {
+                    Ok(settings) => settings,
+                    Err(err) => {
+                        tracing::error!("Unable to procure database settings: {err:#?}");
+                        return HttpResponse::InternalServerError()
+                            .body(format!("Unable to procure the database settings: {err:#?}"));
+                    }
+                }
                 .mongo
                 .collection,
-        );
+            );
 
         match db.find_one(filter).await {
-            Ok(user) => bson::from_document::<LoginChecker>(user.expect("No joy"))
-                .expect("Unable to convert"),
+            Ok(user) => {
+                if let Some(user_found) = user {
+                    user_found
+                } else {
+                    tracing::error!("No user data found in the database");
+                    return HttpResponse::InternalServerError()
+                        .body("No user data matching the supplied email");
+                }
+            }
             Err(err) => {
                 tracing::error!("No conversion possible from Document to LoginChecker: {err}");
                 LoginChecker::default()

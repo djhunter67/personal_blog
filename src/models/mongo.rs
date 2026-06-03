@@ -4,7 +4,7 @@ use tracing::{info, instrument};
 
 use crate::settings;
 
-#[must_use]
+#[must_use = "The connection pool must be used to interact with the database"]
 #[instrument(
     name = "Get Connection Pool for MongoDb",
     level = "info",
