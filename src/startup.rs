@@ -21,27 +21,52 @@ async fn run(
     listener: std::net::TcpListener,
     settings: Settings,
 ) -> Result<actix_web::dev::Server, std::io::Error> {
-    let redis_pool: redis::Client = redis::Client::open(settings.redis.uri.clone())
-        .expect("Failed to create Redis connection redis_pool");
-    let redis_pool: r2d2::Pool<redis::Client> = r2d2::Pool::builder()
+    let redis_pool: redis::Client = match redis::Client::open(settings.redis.uri.clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to connect to the cache layer: {err:#?}");
+            panic!("Application cannot start: {err:#?}")
+        }
+    };
+    let redis_pool: r2d2::Pool<redis::Client> = match r2d2::Pool::builder()
         .max_size(settings.redis.pool_size)
         .connection_timeout(Duration::from_secs(
             settings.redis.pool_timeout_seconds.into(),
         ))
         .build(redis_pool)
-        .expect("Unable to build Redis pool");
+    {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to connect to the cache layer: {err:#?}");
+            panic!("Application cannot start: {err:#?}")
+        }
+    };
 
-    let mongo_pool: MongoClientManager = MongoClientManager::from_uri(&settings.mongo.uri)
-        .await
-        .expect("Unable to connect to mongodb");
-    let mongo_settings = settings::get()
-        .expect("Unable to acquire the settings")
-        .mongo;
+    let mongo_pool: MongoClientManager =
+        match MongoClientManager::from_uri(&settings.mongo.uri).await {
+            Ok(conn) => conn,
+            Err(err) => {
+                tracing::error!("Unable to connect to the database: {err:#?}");
+                panic!("Application cannot start: {err:#?}")
+            }
+        };
+    let mongo_settings = match settings::get() {
+        Ok(settings) => settings,
+        Err(err) => {
+            tracing::error!("Unable to acquire database configurtation: {err:#?}");
+            panic!("Application cannot start: {err:#?}")
+        }
+    }
+    .mongo;
 
-    let mongo_pool: Database = mongo_pool
-        .connect()
-        .expect("Unable to establish the connection")
-        .database(&mongo_settings.db);
+    let mongo_pool: Database = match mongo_pool.connect() {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to connect to the database: {err:#?}");
+            panic!("Application cannot start: {err:#?}")
+        }
+    }
+    .database(&mongo_settings.db);
 
     // Connect to the MongoDB database
     let db_redis = Data::new(redis_pool);

@@ -1,5 +1,7 @@
 use std::task::Poll;
 
+use crate::{models::redis::establish_connection, settings};
+
 use super::templates::IndexTemplate;
 use actix_web::{
     Error, HttpRequest, HttpResponse, Responder, get,
@@ -7,22 +9,73 @@ use actix_web::{
         self, StatusCode,
         header::{ContentEncoding, ContentType},
     },
-    web,
+    web::{self, Data},
 };
 use askama::Template;
 use futures::stream;
 use tracing::{info, instrument};
 
+#[allow(clippy::future_not_send)]
 #[instrument(
     name = "Serving main page",
     level = "debug",
     target = "web_app_bloodhound",
-    fields(samples = 25, title = "Home")
+    fields(samples = 25, title = "Home"),
+    skip(req)
 )]
 #[get("/")]
-pub async fn index() -> HttpResponse {
+pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
     info!("Serving main page");
-    let version: &str = env!("CARGO_PKG_VERSION");
+
+    tracing::info!("About page loading");
+    let session_id = if let Some(cookie) = req.cookie("session_id") {
+        cookie.value().to_string()
+    } else {
+        tracing::error!("User cookie not found: {req:#?}");
+        return HttpResponse::Unauthorized().body(format!(
+            "No session found: {:#?}",
+            req.cookies().expect("No cookies found")
+        ));
+    };
+
+    let mut red_conn = match establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to acquire the redis connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Cache layer error: {err:#?}"));
+        }
+    };
+
+    tracing::info!("Creating the session key");
+    let session_key = format!(
+        "{}{}",
+        &settings::get()
+            .expect("Unable to procure the app settings")
+            .redis
+            .key,
+        session_id
+    );
+
+    tracing::info!("Searching for the session key: {session_key}");
+    let user = match redis::cmd("GET")
+        .arg(&session_key)
+        .query::<Option<String>>(&mut red_conn)
+    {
+        Ok(result) => result,
+        Err(err) => {
+            tracing::error!("Error accessing the cache layer: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to acquire the cache layer: {err:#?}"));
+        }
+    };
+
+    tracing::warn!("The session id: {session_key}");
+    user.map_or_else(
+        || HttpResponse::InternalServerError().body("No user data found"),
+        |email| {
+
+	    let version: &str = env!("CARGO_PKG_VERSION");
 
     let var_name = IndexTemplate {
         title: "Home",
@@ -30,14 +83,16 @@ pub async fn index() -> HttpResponse {
 ", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 "].to_vec(),
         version,
-	user: "Logged in user"
+	user: &email
     };
 
     let rendered = var_name.render().expect("Failed to render template");
 
     HttpResponse::Ok()
         .content_type(ContentType::html())
-        .body(rendered)
+		.body(rendered)
+	},
+   )
 }
 
 #[allow(clippy::future_not_send)]
