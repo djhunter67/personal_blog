@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use actix_web::{
     HttpResponse, Responder, get, post,
     web::{self, Data},
@@ -81,7 +79,6 @@ pub async fn login_user(
     debug!("The user data entered: {:#?}", body.0);
 
     // Validate the user data entered
-    // let identification: ObjectId = body.0.id;
     let useremail: &str = body.0.email.as_str();
     let password: &str = body.0.password.as_str();
 

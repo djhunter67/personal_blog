@@ -4,10 +4,11 @@
   <section id="main__paths">
     <button
       hx-get="/about"
-      hx-target="#main"
+      hx-target="#page_contents"
       hx-swap="outerHTML"
       hx-push-url="true"
-      hx-trigger="click">
+      hx-trigger="click"
+      hx-target-error="#any_error">
       ABOUT
     </button>
     <button

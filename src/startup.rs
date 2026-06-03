@@ -147,21 +147,6 @@ impl Application {
     )]
     pub async fn build(settings: &mut crate::settings::Settings) -> Result<Self, std::io::Error> {
         info!("Buidling the main application");
-        // Sqlite connection
-        // let connection_pool = if let Some(pool) = test_pool {
-        //     pool
-        // } else {
-        //     get_connection_pool(&settings.mongo).await
-        // };
-
-        // info!("Init or touch the DB");
-        // let _connection_pool = match create_schema(&mut settings.sqlite) {
-        //     Ok(conn) => conn,
-        //     Err(err) => {
-        //         error!("Failed to create the SQLite database: {err}\nExiting...");
-        //         panic!("Failed to create the SQLite database");
-        //     }
-        // };
 
         let app_address = format!(
             "{}:{}",
@@ -192,74 +177,3 @@ impl Application {
         self.server.await
     }
 }
-
-/*
-/// # Result
-///  - `Ok(Database)` if the connection pool was successfully created
-/// # Errors
-///  - `mongodb::error::Error` if the connection pool could not be created
-/// # Panics
-///  - If the connection pool could not be created
-#[instrument(name = "Get Connection Pool", level = "info", target = "demo_web_app")]
-async fn get_connection_pool(settings: &settings::Mongo) -> mongodb::Database {
-    info!("Get mongo connection pool");
-    let mut client_options = settings.mongo_options().await;
-    client_options.app_name = Some(settings.clone().db);
-
-    let client = match mongodb::Client::with_options(client_options) {
-        Ok(client) => client,
-        Err(err) => {
-            error!("Failed to connect to MongoDB: {err}\nExiting...");
-            panic!("Failed to connect to MongoDB");
-        }
-    };
-    client.database(&settings.db)
-}
-
-/// # Result
-/// - `Ok(())` Created the sqlite3 database file if it did not exist
-/// # Errors
-/// - `std::io::Error` if the database file could not be created
-/// # Panics
-/// - If the database file could not be created
-#[instrument(name = "Create Database", level = "info", target = "demo_web_app")]
-pub fn create_schema(
-    settings: &mut settings::Sqlite,
-) -> Result<rusqlite::Connection, rusqlite::Error> {
-    info!("Creating the SQLite database schema");
-
-    let conn = match File::create(&settings.path) {
-        Ok(_) => {
-            info!("Successfully created the SQLite database file");
-            Connection::open(&settings.path)
-                .map_err(|err| {
-                    error!("Failed to open the SQLite database: {err}\nExiting...");
-                })
-                .expect("Failed to open the SQLite database")
-        }
-        Err(err) => {
-            error!("Failed to create the SQLite database file: {err}\nExiting...");
-            panic!("Failed to create the SQLite database file");
-        }
-    };
-
-    let schema = settings.schema.clone();
-
-    for line in schema.lines() {
-        warn!("Schema line: {line}");
-    }
-
-    let schema = fs::read_to_string(&settings.schema).expect("Failed to read the schema file");
-
-    match conn.execute_batch(&schema) {
-        Ok(()) => {
-            info!("Successfully created the SQLite database schema");
-        }
-        Err(err) => {
-            error!("Failed to create the SQLite database schema: {err}\nExiting...");
-        }
-    }
-
-    Ok(conn)
-}
-*/

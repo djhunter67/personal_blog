@@ -79,11 +79,6 @@ pub async fn register_user(
     let password: &str = &body.0.password;
     let password_2: &str = &body.0.password_2;
 
-    if !password.eq(password_2) {
-        error!("Password not equal during registration");
-        return HttpResponse::NotAcceptable().json("Passwords do not match");
-    }
-
     let restricted_and_invisible_chars = ['\n', '\r', '\t', '\0', '\x0B', '\x0C'];
 
     if password
@@ -91,6 +86,11 @@ pub async fn register_user(
         .any(|c| restricted_and_invisible_chars.contains(&c))
     {
         return HttpResponse::NotAcceptable().finish();
+    }
+
+    if !password.eq(password_2) {
+        error!("Password not equal during registration");
+        return HttpResponse::NotAcceptable().json("Passwords do not match");
     }
 
     let encrypted_pw: PassWorder = PassWorder::new(password.to_string())
