@@ -2,19 +2,54 @@
 <section id="register">
   <h1>REGISTRATION</h1>
   <div id="register__center">
-    <form id="user_register" hx-post="/v1/register_user" hx-target="#register__response" hx-swap="innerHTML">
-      <label for="email_input">EMAIL:</label>
-      <input type="text" id="register__center__username" name="email_input" autocomplete="on" placeholder="EMAIL" value="theuser@example.com"/>
+    <form
+      id="user_register"
+      hx-post="/v1/register_user"
+      hx-target="#register__response"
+      hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.xhr.responseURL.includes('error')) { htmx.trigger('#email', 'keyup')} else { htmx.trigger('#success', 'click') }">
+      <label for="email">EMAIL:</label>
+      <div hx-ext="response-targets">
+      <input
+	type="text"
+	id="email"
+	name="email"
+	required
+	autocomplete="on"
+	placeholder="Email"
+	hx-trigger="blur changed delay:500ms"
+	hx-get="/v1/validate_email"
+	hx-target="#register__response"
+	/>
+
+      <div id="email-feedback"></div>
+      </div>
+      
       <label for="password_input">PASSWORD:</label>
-      <input type="password" id="register__center__auth" name="password_input" autocomplete="on" placeholder="PASSWORD" value="6ACIJRVbWqTE52"/>
+      <input
+	type="password"
+	id="register__center__auth"
+	name="password_input"
+	autocomplete="on"
+	placeholder="PASSWORD"
+	value="6ACIJRVbWqTE52"
+	required/>
+      
       <label for="password_2_input">PASSWORD:</label>
-      <input type="password" id="register__center__auth_2" name="password_2_input" autocomplete="on" placeholder="PASSWORD_AGAIN" value="6ACIJRVbWqTE52"/>
+      <input
+	type="password"
+	id="register__center__auth_2"
+	name="password_2_input"
+	autocomplete="on"
+	placeholder="PASSWORD_AGAIN"
+	value="6ACIJRVbWqTE52"
+	required/>
       <button type="submit">SUBMIT</button>
     </form>
   </div>
-  <div id="register__response">
+  <div id="register__response" style="color: black;">
     <h4>Server Response</h4>
-    <div>
+    <div style="color: black;">
       {% for (i, data) in content.iter().enumerate() %}
       {{i}} -> {{ data }}
       {% endfor %}

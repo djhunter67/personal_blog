@@ -32,10 +32,20 @@ pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         cookie.value().to_string()
     } else {
         tracing::error!("User cookie not found: {req:#?}");
-        return HttpResponse::Unauthorized().body(format!(
-            "No session found: {:#?}",
-            req.cookies().expect("No cookies found")
-        ));
+
+        let var_name = IndexTemplate {
+        title: "Home",
+        content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+"].to_vec(),
+        version: "0.1.0",
+	user: "NEW USER"
+    };
+
+        let rendered = var_name.render().expect("Failed to render template");
+
+        return HttpResponse::Unauthorized().body(rendered);
     };
 
     let mut red_conn = match establish_connection(redis.get_ref().clone()) {

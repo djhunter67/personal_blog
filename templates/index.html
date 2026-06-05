@@ -2,15 +2,18 @@
 
 <div id="main">
   <section id="main__paths">
-    <button
-      hx-get="/about"
-      hx-target="#page_contents"
-      hx-swap="outerHTML"
-      hx-push-url="true"
-      hx-trigger="click"
-      hx-target-error="#any_error">
-      ABOUT
-    </button>
+    <div hx-ext="response-targets">
+      <button
+	hx-get="/about"
+	hx-target="#page_contents"
+	hx-swap="outerHTML"
+	hx-push-url="true"
+	hx-trigger="click"
+	hx-target-error="#any_error">
+	ABOUT
+      </button>    
+      <div id="any_error"></div>
+    </div>
     <button
       hx-get="/schedule"
       hx-target="#main"

@@ -5,3 +5,4 @@ pub mod login;
 pub mod logout;
 pub mod register;
 pub mod templates;
+pub mod validate_email;
