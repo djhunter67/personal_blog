@@ -177,3 +177,38 @@ pub async fn login_user(
     tracing::error!("PASSWORD INCORRECT");
     return HttpResponse::Ok().body(format!("Invalid user entered credentials: {useremail}"));
 }
+
+#[post("/logout_user")]
+#[instrument(
+    name = "User logout attempted",
+    level = "info",
+    target = "sundayLifeServices web app",
+    skip(redis)
+)]
+pub async fn logout_user(
+    mongo: Data<mongodb::Client>,
+    redis: Data<r2d2::Pool<redis::Client>>,
+    user: web::Json<LoginChecker>,
+) -> impl Responder {
+    let cache_key = format!("user:auth:{}", user.email);
+    let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to procure the cache layer: {err:#?}"));
+        }
+    };
+
+    let _: () = match redis_conn.del(cache_key) {
+        Ok(_) => (),
+        Err(err) => {
+            tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
+            return HttpResponse::InternalServerError().body(format!(
+                "Unable to delete the session data from the cache layer: {err:#?}"
+            ));
+        }
+    };
+
+    HttpResponse::Ok().json("User logout successful")
+}

@@ -14,33 +14,29 @@ struct AboutTemplate<'a> {
 }
 
 #[derive(Template)]
-#[template(path = "schedule.html")]
+#[template(path = "parts/schedule.part.html")]
 struct ScheduleTemplate<'a> {
-    title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
 }
 
 #[derive(Template)]
-#[template(path = "testimonials.html")]
+#[template(path = "parts/testimonials.parts.html")]
 struct TestimonialTemplate<'a> {
-    title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
 }
 
 #[derive(Template)]
-#[template(path = "finances.html")]
+#[template(path = "parts/finances.part.html")]
 struct FinancesTemplate<'a> {
-    title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
 }
 
 #[derive(Template)]
-#[template(path = "contact.html")]
+#[template(path = "parts/contact.parts.html")]
 struct ContactTemplate<'a> {
-    title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
 }
@@ -117,7 +113,6 @@ pub async fn schedule() -> HttpResponse {
     let closed_dates: &str = "These dates have been reserved";
     let canceled: &str = "Cancellations";
     let template = ScheduleTemplate {
-        title: "Schedule",
         content: [open_dates, closed_dates, canceled].to_vec(),
         user: "logged in user",
     };
@@ -135,7 +130,6 @@ pub async fn testimonials() -> HttpResponse {
     let ratings: &str = "Five Stars";
     let dates_of_service: &str = "A DateTime object";
     let template = TestimonialTemplate {
-        title: "Testimonials",
         content: [customer_feedback, ratings, dates_of_service].to_vec(),
         user: "logged in user",
     };
@@ -149,11 +143,10 @@ pub async fn testimonials() -> HttpResponse {
 
 #[get("/finances")]
 pub async fn finances() -> HttpResponse {
-    let finances_benefit: &str = "The company started is great!";
-    let financial_aid: &str = "Five Stars";
-    let customer_value: &str = "A DateTime object";
+    let finances_benefit: &str = "Hiring quality employees!";
+    let financial_aid: &str = "To be determined";
+    let customer_value: &str = "The value provided to a customer from our services";
     let template = FinancesTemplate {
-        title: "Costs",
         content: [finances_benefit, financial_aid, customer_value].to_vec(),
         user: "logged in user",
     };
@@ -171,7 +164,6 @@ pub async fn contact() -> HttpResponse {
     let personal_contact: &str = "(623) 555-2560";
     let business_email: &str = "nahan@sundaylifeservices.com";
     let template = ContactTemplate {
-        title: "Contact",
         content: [business_contact, personal_contact, business_email].to_vec(),
         user: "logged in user",
     };

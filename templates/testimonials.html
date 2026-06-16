@@ -1,9 +1,4 @@
 {% extends "base.html" %} {% block title %} {{ title }} {% endblock %} {% block head %} {% endblock %} {% block individual_page_contents %}
 
-<div>
-  {% for (i, data) in content.iter().enumerate() %}
-  {{i}} -> {{ data }}
-  {% endfor %}
-</div>
 
 {% call super() %} {% endblock %}

@@ -2,7 +2,7 @@ application:
   port: 8123
 
 mongo:
- uri: "mongodb://djhunter67:<password>"
+ uri: "mongodb://djhunter67:secret_passers@10.20.20.32:27017/?authSource=admin&authMechanism=SCRAM-SHA-256"
  db: "personal_blog"
  collection: "development"
  require_auth: true
@@ -10,7 +10,7 @@ mongo:
  connection_timeout: 1
 
 redis:
-  uri: "redis://:<password>"
+  uri: "redis://:secret_passers_redis@10.20.20.32:6379"
   key: "session:"
   pool_size: 1
   pool_max_open: 16

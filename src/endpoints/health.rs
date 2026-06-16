@@ -1,4 +1,4 @@
-use actix_web::{get, HttpResponse, Responder};
+use actix_web::{HttpResponse, Responder, get};
 use tracing::{info, instrument};
 
 #[get("/health_check")]
@@ -11,7 +11,7 @@ pub async fn health_check() -> impl Responder {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod test {
-    use actix_web::{test, App};
+    use actix_web::{App, test};
 
     use super::super::health::health_check;
 

@@ -106,6 +106,7 @@ async fn run(
                 web::scope("/v1")
                     .service(login::login_template)
                     .service(login::login_user)
+                    .service(login::logout_user)
                     .service(register::register_template)
                     .service(register::register_user)
                     .service(validate_email::validate_email),

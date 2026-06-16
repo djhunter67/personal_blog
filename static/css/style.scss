@@ -145,6 +145,10 @@ $light-yellow: hsl(60, 100%, 90%);
     @include meta.load-css("_error");
 }
 
+#info_buttons {
+    background-color: white;
+}
+
 @media (max-width: 844px) {
     #template_pages #top {
 	display: flex;
