@@ -1,32 +1,53 @@
-use actix_web::{HttpResponse, get};
-use askama::Template;
+use actix_web::{HttpRequest, HttpResponse, Responder, get, web::Data};
+use redis::Commands;
 use tracing::instrument;
 
-use crate::endpoints::templates::IndexTemplate;
+use crate::models::redis_conf;
 
+#[allow(clippy::future_not_send)]
 #[get("/logout")]
 #[instrument(
-    name = "User login attempted",
+    name = "User logout attempted",
     level = "info",
-    target = "sundayLifeServices web app"
+    target = "sundayLifeServices web app",
+    skip(redis)
 )]
-pub async fn logout() -> HttpResponse {
-    tracing::debug!("Logout endpoint called");
+pub async fn logout(
+    mongo: Data<mongodb::Client>,
+    redis: Data<r2d2::Pool<redis::Client>>,
+    req: HttpRequest,
+) -> impl Responder {
+    // extract the session key from the frontend
 
-    // Remove the session_id and clear the cookie
-
-    let version: &str = env!("CARGO_PKG_VERSION");
-
-    let var_name = IndexTemplate {
-        title: "Home",
-        content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-"].to_vec(),
-        version,
-	user: "None"
+    let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to procure the cache layer: {err:#?}"));
+        }
     };
 
-    let template = var_name.render().expect("Login page render error");
+    let session_id = if let Some(cookie) = req.cookie("session_id") {
+        cookie.value().to_string()
+    } else {
+        tracing::error!("User cookie not found: {req:#?}");
+        return HttpResponse::Unauthorized().body(format!(
+            "No session found: {:#?}",
+            req.cookies().expect("No cookies found")
+        ));
+    };
 
-    HttpResponse::Ok().body(template)
+    let cache_key = format!("session:{session_id}");
+    let _: () = match redis_conn.del::<String, ()>(cache_key) {
+        Ok(()) => (),
+        Err(err) => {
+            tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
+            return HttpResponse::InternalServerError().body(format!(
+                "Unable to delete the session data from the cache layer: {err:#?}"
+            ));
+        }
+    };
+
+    HttpResponse::Ok().json("User logout successful")
 }
