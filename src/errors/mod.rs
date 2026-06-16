@@ -11,7 +11,7 @@ use crate::endpoints::templates::ErrorPage;
     target = "portfolio_site"
 )]
 pub async fn error() -> HttpResponse {
-    tracing::info!("Serving error page");
+    tracing::info!("{}", format!("Serving error page"));
 
     let var_name = ErrorPage {
         title: "Error",

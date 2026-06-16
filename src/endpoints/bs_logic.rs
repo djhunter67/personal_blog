@@ -7,9 +7,8 @@ use crate::{
 };
 
 #[derive(Template)]
-#[template(path = "about.html")]
+#[template(path = "parts/about.part.html")]
 struct AboutTemplate<'a> {
-    title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
 }
@@ -99,7 +98,6 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
             let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
             let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";
             let template = AboutTemplate {
-                title: "About",
                 content: [company_origins, owner_info].to_vec(),
                 user: &email,
             };

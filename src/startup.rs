@@ -83,6 +83,7 @@ async fn run(
                 web::scope("/static")
                     .service(templates::favicon)
                     .service(templates::logomain)
+                    .service(templates::usmc_patrolling)
                     .service(templates::stylesheet)
                     .service(templates::source_map)
                     .service(templates::htmx)
