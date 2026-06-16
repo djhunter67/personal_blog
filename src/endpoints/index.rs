@@ -1,6 +1,6 @@
 use std::task::Poll;
 
-use crate::{models::redis_conf::establish_connection, settings};
+use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
 
 use super::templates::IndexTemplate;
 use actix_web::{
@@ -45,7 +45,8 @@ pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
 
         let rendered = var_name.render().expect("Failed to render template");
 
-        return HttpResponse::Unauthorized().body(rendered);
+        // return HttpResponse::Unauthorized().body(rendered);
+        return HttpResponse::Ok().body(rendered);
     };
 
     let mut red_conn = match establish_connection(redis.get_ref().clone()) {
@@ -82,7 +83,17 @@ pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
 
     tracing::warn!("The session id: {session_key}");
     user.map_or_else(
-        || HttpResponse::InternalServerError().body("No user data cached"),
+        || {
+	    let error_template = ErrorPage {
+		title: "Cache-Error",
+		code: 500,
+		error: "Session key live but no user data associated with the session key",
+		message: "Logout, if possible, and log back in"
+	    };
+
+	    let rendered = error_template.render().expect("unable to render the error template");
+	    HttpResponse::Ok().body(rendered)
+	},
         |email| {
 
 	    let version: &str = env!("CARGO_PKG_VERSION");

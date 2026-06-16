@@ -40,6 +40,10 @@
 	  <button
 	    id="template_pages__top__nav__login"
 	    hx-get="/v1/logout"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    hx-trigger="click"
 	    >
 	    LOGOUT
 	  </button>

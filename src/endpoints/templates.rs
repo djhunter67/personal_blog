@@ -14,7 +14,7 @@ pub struct IndexTemplate<'a> {
 }
 
 #[derive(Template)]
-#[template(path = "errors.html")]
+#[template(path = "parts/modal_load.part.html")]
 pub struct ErrorPage<'a> {
     pub title: &'a str,
     pub code: u32,
