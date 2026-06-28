@@ -58,7 +58,7 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
     let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
         Ok(conn) => conn,
         Err(err) => {
-            tracing::error!("Unable to acquire the redis connection: {err:#?}");
+            tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
             return HttpResponse::InternalServerError()
                 .body(format!("Cache layer error: {err:#?}"));
         }
@@ -87,9 +87,12 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         }
     };
 
-    tracing::warn!("The session id: {session_key}");
+    tracing::debug!("The session id: {session_key}");
     user.map_or_else(
-        || HttpResponse::InternalServerError().body("No user data found"),
+        || {
+            tracing::error!("No user data associated with the recieved session key: {session_key}");
+            HttpResponse::InternalServerError().body("No user data found")
+        },
         |email| {
             let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
             let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";

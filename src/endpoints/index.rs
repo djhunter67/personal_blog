@@ -1,6 +1,6 @@
 use std::task::Poll;
 
-use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
+// use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
 
 use super::templates::IndexTemplate;
 use actix_web::{
@@ -21,100 +21,100 @@ use tracing::{info, instrument};
     level = "debug",
     target = "web_app_bloodhound",
     fields(samples = 25, title = "Home"),
-    skip(req)
+    skip(_redis, _req)
 )]
 #[get("/")]
-pub async fn index(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
+pub async fn index(_req: HttpRequest, _redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
     info!("Serving main page");
 
     tracing::info!("About page loading");
-    let session_id = if let Some(cookie) = req.cookie("session_id") {
-        cookie.value().to_string()
-    } else {
-        tracing::error!("User cookie not found: {req:#?}");
+    //     let session_id = if let Some(cookie) = req.cookie("session_id") {
+    //         cookie.value().to_string()
+    //     } else {
+    //         tracing::error!("User cookie not found: {req:#?}");
 
-        let var_name = IndexTemplate {
-        title: "Home",
-        content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    //         let var_name = IndexTemplate {
+    //         title: "Home",
+    //         content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    // ", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    // ",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+    // "].to_vec(),
+    //         version: "0.1.0",
+    // 	user: "NEW USER"
+    //     };
+
+    //         let rendered = var_name.render().expect("Failed to render template");
+
+    //         // return HttpResponse::Unauthorized().body(rendered);
+    //         return HttpResponse::Ok().body(rendered);
+    //     };
+
+    //     let mut red_conn = match establish_connection(redis.get_ref().clone()) {
+    //         Ok(conn) => conn,
+    //         Err(err) => {
+    //             tracing::error!("Unable to acquire the redis connection: {err:#?}");
+    //             return HttpResponse::InternalServerError()
+    //                 .body(format!("Cache layer error: {err:#?}"));
+    //         }
+    //     };
+
+    //     tracing::info!("Creating the session key");
+    //     let session_key = format!(
+    //         "{}{}",
+    //         &settings::get()
+    //             .expect("Unable to procure the app settings")
+    //             .redis
+    //             .key,
+    //         session_id
+    //     );
+
+    //     tracing::info!("Searching for the session key: {session_key}");
+    //     let user = match redis::cmd("GET")
+    //         .arg(&session_key)
+    //         .query::<Option<String>>(&mut red_conn)
+    //     {
+    //         Ok(result) => result,
+    //         Err(err) => {
+    //             tracing::error!("Error accessing the cache layer: {err:#?}");
+    //             return HttpResponse::InternalServerError()
+    //                 .body(format!("Unable to acquire the cache layer: {err:#?}"));
+    //         }
+    //     };
+
+    //     tracing::warn!("The session id: {session_key}");
+    //     user.map_or_else(
+    //         || {
+    // 	    tracing::error!("Unable to procure the user based on the session key");
+    // 	    let error_template = ErrorPage {
+    // 		title: "Cache-Error",
+    // 		code: 500,
+    // 		error: "Session key live but no user data associated with the session key",
+    // 		message: "Logout, if possible, and log back in"
+    // 	    };
+
+    // 	    let rendered = error_template.render().expect("unable to render the error template");
+    // 	    HttpResponse::Unauthorized().body(rendered)
+    // 	},
+    //         |email| {
+
+    let email = String::from("some_email@email.com");
+
+    let var_name = IndexTemplate::new(
+        "Home",
+         [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 ", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 ",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 "].to_vec(),
-        version: "0.1.0",
-	user: "NEW USER"
-    };
-
-        let rendered = var_name.render().expect("Failed to render template");
-
-        // return HttpResponse::Unauthorized().body(rendered);
-        return HttpResponse::Ok().body(rendered);
-    };
-
-    let mut red_conn = match establish_connection(redis.get_ref().clone()) {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Unable to acquire the redis connection: {err:#?}");
-            return HttpResponse::InternalServerError()
-                .body(format!("Cache layer error: {err:#?}"));
-        }
-    };
-
-    tracing::info!("Creating the session key");
-    let session_key = format!(
-        "{}{}",
-        &settings::get()
-            .expect("Unable to procure the app settings")
-            .redis
-            .key,
-        session_id
+	 &email
     );
-
-    tracing::info!("Searching for the session key: {session_key}");
-    let user = match redis::cmd("GET")
-        .arg(&session_key)
-        .query::<Option<String>>(&mut red_conn)
-    {
-        Ok(result) => result,
-        Err(err) => {
-            tracing::error!("Error accessing the cache layer: {err:#?}");
-            return HttpResponse::InternalServerError()
-                .body(format!("Unable to acquire the cache layer: {err:#?}"));
-        }
-    };
-
-    tracing::warn!("The session id: {session_key}");
-    user.map_or_else(
-        || {
-	    let error_template = ErrorPage {
-		title: "Cache-Error",
-		code: 500,
-		error: "Session key live but no user data associated with the session key",
-		message: "Logout, if possible, and log back in"
-	    };
-
-	    let rendered = error_template.render().expect("unable to render the error template");
-	    HttpResponse::Ok().body(rendered)
-	},
-        |email| {
-
-	    let version: &str = env!("CARGO_PKG_VERSION");
-
-    let var_name = IndexTemplate {
-        title: "Home",
-        content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-"].to_vec(),
-        version,
-	user: &email
-    };
 
     let rendered = var_name.render().expect("Failed to render template");
 
     HttpResponse::Ok()
         .content_type(ContentType::html())
-		.body(rendered)
-	},
-   )
+        .body(rendered)
+    // },
+    // )
 }
 
 #[allow(clippy::future_not_send)]

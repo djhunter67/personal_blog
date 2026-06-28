@@ -9,9 +9,9 @@
     <link rel="icon" href="/static/favicon" type="image/x-icon" />
     <link rel="stylesheet" type="text/css" href="/static/stylesheet">
     <script  type="text/javascript" defer src="/static/htmx"></script>
-    <script  type="text/javascript" defer src="/static/response-targets"></script>
+    <script  type="text/javascript" defer src="/static/response-targets" defer></script>
     <script  type="text/javascript" defer src="/static/sse"></script>
-    <script  type="text/javascript" defer src="/static/action_script"></script>
+    <script  type="text/javascript" defer src="/static/action_script" defer></script>
     {% block head %}{% endblock %}
   </head>
   <body>
@@ -25,6 +25,7 @@
 	    hx-swap="outerHTML"
 	    hx-push-url="true"
 	    hx-trigger="click"
+	    hx-target-error="#error_template"
 	    >HOME
 	  </button>
 	  <button
@@ -42,8 +43,6 @@
 	    hx-get="/v1/logout"
 	    hx-target="#template_pages"
 	    hx-swap="outerHTML"
-	    hx-push-url="true"
-	    hx-trigger="click"
 	    >
 	    LOGOUT
 	  </button>

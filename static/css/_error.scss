@@ -1,6 +1,6 @@
 
-.error {
-    background-color: gray;
+#error {
+    background-color: blue;
     &__block {
 	display: flex;
 	flex-direction: column;

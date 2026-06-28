@@ -2,7 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, web::Data};
 use redis::Commands;
 use tracing::instrument;
 
-use crate::models::redis_conf;
+use crate::{endpoints::templates::IndexTemplate, models::redis_conf};
 
 #[allow(clippy::future_not_send)]
 #[get("/logout")]
@@ -48,6 +48,8 @@ pub async fn logout(
             ));
         }
     };
+
+    // let index_template = IndexTemplate
 
     HttpResponse::Ok().json("User logout successful")
 }

@@ -13,6 +13,18 @@ pub struct IndexTemplate<'a> {
     pub user: &'a str,
 }
 
+impl<'a> IndexTemplate<'a> {
+    #[must_use]
+    pub const fn new(title: &'a str, content: Vec<&'a str>, user: &'a str) -> Self {
+        Self {
+            title,
+            content,
+            version: env!("CARGO_PKG_VERSION"),
+            user,
+        }
+    }
+}
+
 #[derive(Template)]
 #[template(path = "parts/modal_load.part.html")]
 pub struct ErrorPage<'a> {

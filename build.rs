@@ -3,8 +3,8 @@ use std::{env, fs};
 /// This will change the file multiple times per build.
 /// This build.rs file will work in tandem with the commit
 /// and push hooks to change the secret being injected here.
-const MONGO_LOCATION: &str = "10.20.20.32:27017/?authSource=admin&authMechanism=SCRAM-SHA-256";
-const REDIS_LOCATION: &str = "10.20.20.32:6379";
+const MONGO_LOCATION: &str = "10.20.20.36:27017/?authSource=admin&authMechanism=SCRAM-SHA-256";
+const REDIS_LOCATION: &str = "10.20.20.36:6379";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dest_path = String::from("./settings/base.yaml");
@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _out_dir = env::var("OUT_DIR").expect("The OUT_DIR is unknown");
 
     // Create the yaml content
-    let mongo_uri = format!(" uri: \"mongodb://djhunter67:{mongo_val}@{MONGO_LOCATION}\"");
+    let mongo_uri = format!(" uri: \"mongodb://admin:{mongo_val}@{MONGO_LOCATION}\"");
     let redis_connect = format!("  uri: \"redis://:{redis_val}@{REDIS_LOCATION}\"");
 
     // Capture the contents of the yaml file
