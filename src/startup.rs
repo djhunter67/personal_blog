@@ -1,4 +1,6 @@
-use crate::endpoints::{self, health, index, login, logout, register, templates, validate_email};
+use crate::endpoints::{
+    self, health, index, login, logout, register, templates, user_input, validate_email,
+};
 use crate::models::r2d2_mongodb::client_manager::MongoClientManager;
 use crate::settings::Settings;
 use actix_web::web::{self, Data};
@@ -109,7 +111,8 @@ async fn run(
                     .service(logout::logout)
                     .service(register::register_template)
                     .service(register::register_user)
-                    .service(validate_email::validate_email),
+                    .service(validate_email::validate_email)
+                    .service(user_input::submit_text),
             )
             .route("/sse", web::get().to(index::sse))
     })

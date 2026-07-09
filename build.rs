@@ -3,8 +3,8 @@ use std::{env, fs};
 /// This will change the file multiple times per build.
 /// This build.rs file will work in tandem with the commit
 /// and push hooks to change the secret being injected here.
-const MONGO_LOCATION: &str = "10.20.20.36:27017/?authSource=admin&authMechanism=SCRAM-SHA-256";
-const REDIS_LOCATION: &str = "10.20.20.36:6379";
+const MONGO_LOCATION: &str = "10.20.20.29:27017/?authSource=admin&authMechanism=SCRAM-SHA-256";
+const REDIS_LOCATION: &str = "10.20.20.29:32379";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dest_path = String::from("./settings/base.yaml");

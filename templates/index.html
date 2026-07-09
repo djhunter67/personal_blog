@@ -42,16 +42,29 @@
   <section id="main__info_cards">
     {% for (i,card) in content.iter().enumerate() %}
     <div class="card">
+      <div class="card__header" id="card__{{i}}">
+	<img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image">
+	<h2> {{ content_title }} </h2>
+      </div>
       <div class="card__text">
 	<p>
 	  {{ card }}
-	</p>	
-      </div>
-      <div class="card__image">
-	<img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image" height="350px" width="350px">
+	</p>
       </div>
     </div>
     {% endfor %}
+  </section>
+  <section id="main__user_text">
+    <form
+      hx-post="/v1/submit_text"
+      hx-target="#card__1"
+      hx-swap="outerHTML"
+      >
+      <input type="text" name="text_title" placeholder="Place title here" value="test title" required/>
+      <textarea name="text_body" placeholder="Enter your text here"  />Test text that ensures this feature will work during development</textarea>
+      <input type="text" name="text_footer" placeholder="text author here" value="Hunter, Christerpher" required/>
+      <button type="submit">Submit</button>
+    </form>
   </section>
 </div>
 

@@ -57,17 +57,30 @@
 		}
 	    }
 
-	    &__image {
+	    &__header {
+		display: flex;
+		align-items: center;
+		// justify-content: first;
 		// flex: 0 0 70%;
 		overflow-x: hidden;
+
+		h2 {
+		    margin-left: 4rem;
+		    font-size: xx-large;
+		}
+		
 		img {
-		    width: 100%;
+		    width: 12%;
 		    height: auto;
 		    display: block;
 		    object-fit: cover;
 		}
 	    }
-	}
+	}	
+    }
+    &__user_text {
+	display: flex;
+	flex-direction: column;
     }
 }
 

@@ -69,6 +69,7 @@ rand = "0.10.1"
 base64 = "0.22.1"
 uuid = { version = "1.23.2", features = ["v4"] }
 config = "0.15.23"
+chrono = "0.4.45"
 
 [dev-dependencies]
 rstest = "0.24.0"

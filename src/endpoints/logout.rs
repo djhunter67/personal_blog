@@ -2,7 +2,7 @@ use actix_web::{HttpRequest, HttpResponse, Responder, get, web::Data};
 use redis::Commands;
 use tracing::instrument;
 
-use crate::{endpoints::templates::IndexTemplate, models::redis_conf};
+use crate::models::redis_conf;
 
 #[allow(clippy::future_not_send)]
 #[get("/logout")]
