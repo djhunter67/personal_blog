@@ -59,14 +59,20 @@
 
 	    &__header {
 		display: flex;
-		align-items: center;
-		// justify-content: first;
+		align-items: start;
+		justify-content: space-between;
 		// flex: 0 0 70%;
 		overflow-x: hidden;
 
 		h2 {
 		    margin-left: 4rem;
 		    font-size: xx-large;
+		}
+
+		h3 {
+		    justify-self: end;
+		    margin-left: 4rem;
+		    font-size: large;
 		}
 		
 		img {
@@ -79,8 +85,65 @@
 	}	
     }
     &__user_text {
-	display: flex;
-	flex-direction: column;
+	margin-top: 2rem;
+	outline:1px solid violet;
+	&__journaler {
+	    display: flex;
+	    flex-direction: column;
+	    &__title {
+		background: transparent;
+		border: none;
+		font-family: 'Georgia', serif; /* Serif fonts often feel more "journal-like" */
+		font-size: 1.1rem;
+		line-height: 1.6;
+		padding: 0.22rem 0;
+		color: #333;	
+		border-radius: 0.33rem;
+		margin: 2rem 0;		
+	    }
+	    
+	    &__body {
+		background: transparent;
+		border: none;
+		resize: vertical; /* Allows user to expand height */
+		font-family: 'Georgia', serif; /* Serif fonts often feel more "journal-like" */
+		font-size: 1.1rem;
+		line-height: 1.6;
+		padding: 0.22rem 0;
+		color: #333;
+		// outline: 1px solid violet;
+		border-radius: 0.33rem;
+		margin: 2rem 0;
+
+		&:focus {
+		    background: rgba(0,0,0,0.06)
+		}
+	    }
+
+	    &__author {
+		background: transparent;
+		border: none;
+		font-family: 'Georgia', serif; /* Serif fonts often feel more "journal-like" */
+		font-size: 1.1rem;
+		line-height: 1.6;
+		padding: 0.22rem 0;
+		color: #333;
+		// outline:1px solid violet;
+		border-radius: 0.33rem;
+		margin: 2rem 0;
+	    }
+
+	    button {
+		background-color: coral;
+		color: white;
+		border: none;
+		border-radius: 5px;
+		padding: 8px 16px;
+		margin: 1rem 0;
+		font-size: 1rem;
+		cursor: pointer;		
+	    }
+	}
     }
 }
 

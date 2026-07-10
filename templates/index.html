@@ -42,13 +42,14 @@
   <section id="main__info_cards">
     {% for (i,card) in content.iter().enumerate() %}
     <div class="card">
-      <div class="card__header" id="card__{{i}}">
+      <div class="card__header">
 	<img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image">
-	<h2> {{ content_title }} </h2>
+	<h2> Title: {{ card.get_title() }}  </h2>
+	<h3> Author: {{card.get_author()}} </h3>
       </div>
-      <div class="card__text">
+      <div class="card__text" id="card__{{i}}">
 	<p>
-	  {{ card }}
+	  {{ card.get_body() }}
 	</p>
       </div>
     </div>
@@ -57,12 +58,13 @@
   <section id="main__user_text">
     <form
       hx-post="/v1/submit_text"
-      hx-target="#card__1"
+      hx-target="#card__0"
       hx-swap="outerHTML"
+      id="main__user_text__journaler"
       >
-      <input type="text" name="text_title" placeholder="Place title here" value="test title" required/>
-      <textarea name="text_body" placeholder="Enter your text here"  />Test text that ensures this feature will work during development</textarea>
-      <input type="text" name="text_footer" placeholder="text author here" value="Hunter, Christerpher" required/>
+      <input id="main__user_text__journaler__title" type="text" name="text_title" placeholder="Place title here" value="test title" required/>
+      <textarea id="main__user_text__journaler__body"name="text_body" placeholder="Enter your text here"  />Test text that ensures this feature will work during development Test text that ensures this feature will work during developmentTest text that ensures this feature will work during development.  On this particular morning it twas very kindly a good morning.  After the morning of this great morning it war apparent how the day would unfold.  Unfolding the day was similar to protein folding.</textarea>
+      <input id="main__user_text__journaler__author" type="text" name="text_author" placeholder="text author here" value="Hunter, Christerpher" required/>
       <button type="submit">Submit</button>
     </form>
   </section>

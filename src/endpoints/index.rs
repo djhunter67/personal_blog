@@ -2,6 +2,8 @@ use std::task::Poll;
 
 // use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
 
+use crate::endpoints::user_input::BlogPost;
+
 use super::templates::IndexTemplate;
 use actix_web::{
     Error, HttpRequest, HttpResponse, Responder, get,
@@ -12,6 +14,7 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
+use chrono::DateTime;
 use futures::stream;
 use tracing::{info, instrument};
 
@@ -101,12 +104,27 @@ pub async fn index(_req: HttpRequest, _redis: Data<r2d2::Pool<redis::Client>>) -
 
     let var_name = IndexTemplate::new(
         "Home",
-         [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-"].to_vec(),
-	"default title",
-	 &email
+        vec![
+            BlogPost::new(
+                "new post".to_string(),
+                "the body of the post".to_string(),
+                "Some Author".to_string(),
+                DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+                    .expect("Failed to parse date")
+                    .with_timezone(&chrono::Utc),
+                false,
+            ),
+            BlogPost::new(
+                "new post".to_string(),
+                "The body of the post".to_string(),
+                "Some new Author".to_string(),
+                DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+                    .expect("Failed to parse date")
+                    .with_timezone(&chrono::Utc),
+                false,
+            ),
+        ],
+        &email,
     );
 
     let rendered = var_name.render().expect("Failed to render template");

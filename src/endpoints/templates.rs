@@ -4,28 +4,23 @@ use askama::Template;
 use std::path::PathBuf;
 use tracing::{error, info, instrument};
 
+use super::user_input::BlogPost;
+
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate<'a> {
     pub title: &'a str,
-    pub content: Vec<&'a str>,
-    pub content_title: &'a str,
+    pub content: Vec<BlogPost>,
     pub version: &'a str,
     pub user: &'a str,
 }
 
 impl<'a> IndexTemplate<'a> {
     #[must_use]
-    pub const fn new(
-        title: &'a str,
-        content: Vec<&'a str>,
-        content_title: &'a str,
-        user: &'a str,
-    ) -> Self {
+    pub const fn new(title: &'a str, content: Vec<BlogPost>, user: &'a str) -> Self {
         Self {
             title,
             content,
-            content_title,
             version: env!("CARGO_PKG_VERSION"),
             user,
         }

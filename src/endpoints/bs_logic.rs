@@ -1,3 +1,4 @@
+/// Business logic lives here
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
 use askama::Template;
 
