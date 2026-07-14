@@ -1,19 +1,20 @@
 use std::fmt::Display;
 
 use actix_web::{
-    HttpRequest, HttpResponse, post,
+    HttpRequest, HttpResponse,
+    http::header::ContentType,
+    post,
     web::{self, Data},
 };
+use askama::Template;
 use chrono::DateTime;
-use mongodb::{
-    Collection,
-    bson::{Document, doc},
-};
-use redis::Commands;
+use futures::StreamExt;
+use mongodb::{Collection, bson::doc};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
+    endpoints::templates::PostPart,
     models::{
         mongo,
         redis_conf::{self},
@@ -153,7 +154,7 @@ pub async fn submit_text(
             post.change_logged_in(user_exists);
 
             // Save the post to the database
-            let db: Collection<Document> =
+            let db: Collection<BlogPost> =
                 match mongo::establish_connection(mongo.get_ref().clone()).await {
                     Ok(db) => db,
                     Err(err) => {
@@ -167,41 +168,73 @@ pub async fn submit_text(
 
             tracing::info!("Post: {:#?}", post.get_body());
 
-            let oid = db
-                .insert_one(doc! {
-                "title": post.get_title(),
-                "body": post.get_body(),
-                "author": post.get_author(),
-                "email": post.get_email(),
-                "date": post.get_date().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
-                "logged_in": post.is_logged_in(),
-                })
+            let _oid = db
+                .insert_one(&post)
                 .await
                 .expect("Unable to insert post into database");
 
             // Save the object ID to Redis with the user's session ID as the key
-            let session_id = req
-                .cookie("session_id")
-                .expect("No session cookie found")
-                .value()
-                .to_string();
+            // let session_id = req
+            //     .cookie("session_id")
+            //     .expect("No session cookie found")
+            //     .value()
+            //     .to_string();
 
-            let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
-                Ok(conn) => conn,
-                Err(err) => {
-                    tracing::error!("Error establishing connection to Redis: {err:#?}");
-                    return HttpResponse::InternalServerError()
-                        .body(format!("Error establishing connection to Redis: {err:#?}"));
+            // let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+            //     Ok(conn) => conn,
+            //     Err(err) => {
+            //         tracing::error!("Error establishing connection to Redis: {err:#?}");
+            //         return HttpResponse::InternalServerError()
+            //             .body(format!("Error establishing connection to Redis: {err:#?}"));
+            //     }
+            // };
+
+            // let cache_key = format!("blog_post:{session_id}");
+
+            // red_conn
+            //     .set::<String, String, ()>(cache_key, oid.inserted_id.to_string())
+            //     .expect("Unable to set session ID in Redis");
+
+            // return HttpResponse::Ok().body(format!("{}", oid.inserted_id));
+
+            let filter = mongodb::bson::doc! { "email": post.get_email() };
+            let mut blog_post: Vec<BlogPost> = Vec::new();
+            tracing::warn!("The email to check against: {}", post.get_email());
+
+            // Each user can have more than one blog post, so we need to find all of them
+            match db.find(filter).await {
+                Ok(mut user_cursor) => {
+                    tracing::info!("User found: {user_cursor:#?}");
+
+                    while let Some(result) = user_cursor.next().await {
+                        match result {
+                            Ok(document) => {
+                                blog_post.push(document);
+                            }
+                            Err(err) => {
+                                tracing::error!("Error retrieving document: {err:#?}");
+                                return HttpResponse::InternalServerError()
+                                    .body(format!("Error retrieving document: {err:#?}"));
+                            }
+                        }
+                    }
                 }
-            };
 
-            let cache_key = format!("blog_post:{session_id}");
+                Err(err) => {
+                    tracing::error!("Error accessing the database: {err:#?}");
+                    return HttpResponse::InternalServerError().body(format!(
+                        "Unable to acquire the database connection: {err:#?}"
+                    ));
+                }
+            }
 
-            red_conn
-                .set::<String, String, ()>(cache_key, oid.inserted_id.to_string())
-                .expect("Unable to set session ID in Redis");
+            let var_name = PostPart::new(blog_post, post.get_email().to_string());
 
-            return HttpResponse::Ok().body(format!("{}", oid.inserted_id));
+            let rendered = var_name.render().expect("Failed to render template");
+
+            return HttpResponse::Ok()
+                .content_type(ContentType::html())
+                .body(rendered);
         }
 
         Err(err) => {

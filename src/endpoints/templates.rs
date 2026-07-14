@@ -28,6 +28,20 @@ impl<'a> IndexTemplate<'a> {
 }
 
 #[derive(Template)]
+#[template(path = "parts/posts.part.html")]
+pub struct PostPart {
+    content: Vec<BlogPost>,
+    user: String,
+}
+
+impl PostPart {
+    #[must_use]
+    pub const fn new(content: Vec<BlogPost>, user: String) -> Self {
+        Self { content, user }
+    }
+}
+
+#[derive(Template)]
 #[template(path = "parts/modal_load.part.html")]
 pub struct ErrorPage<'a> {
     pub title: &'a str,

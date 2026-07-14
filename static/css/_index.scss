@@ -90,21 +90,22 @@
 	&__journaler {
 	    display: flex;
 	    flex-direction: column;
+	    outline: black 2px dashed;
+	    border-radius: 2rem;
 	    &__title {
 		background: transparent;
-		border: none;
 		font-family: 'Georgia', serif; /* Serif fonts often feel more "journal-like" */
 		font-size: 1.1rem;
 		line-height: 1.6;
 		padding: 0.22rem 0;
 		color: #333;	
 		border-radius: 0.33rem;
-		margin: 2rem 0;		
+		margin: 1.2rem 0.2rem;
+		border-bottom: black 1px solid;
 	    }
 	    
 	    &__body {
 		background: transparent;
-		border: none;
 		resize: vertical; /* Allows user to expand height */
 		font-family: 'Georgia', serif; /* Serif fonts often feel more "journal-like" */
 		font-size: 1.1rem;
@@ -113,7 +114,8 @@
 		color: #333;
 		// outline: 1px solid violet;
 		border-radius: 0.33rem;
-		margin: 2rem 0;
+		margin: 1rem 0.2rem;
+		border-bottom: 1px solid black;
 
 		&:focus {
 		    background: rgba(0,0,0,0.06)
@@ -130,7 +132,7 @@
 		color: #333;
 		// outline:1px solid violet;
 		border-radius: 0.33rem;
-		margin: 2rem 0;
+		margin: 2rem 0.2rem;
 	    }
 
 	    button {
