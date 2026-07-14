@@ -41,15 +41,11 @@ pub async fn index(
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         cookie.value().to_string()
     } else {
-        tracing::error!("User cookie not found: {req:#?}");
+        tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
         let email = String::from("unregistered@unregisterd_email.com");
 
-        let var_name = IndexTemplate::new(
-            "Home",
-            vec![BlogPost::default(), BlogPost::default()],
-            &email,
-        );
+        let var_name = IndexTemplate::new("Home", vec![BlogPost::default()], &email);
 
         let rendered = var_name.render().expect("Failed to render template");
 
