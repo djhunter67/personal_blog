@@ -87,6 +87,11 @@ impl BlogPost {
         &self.date
     }
 
+    #[must_use]
+    pub fn get_email(&self) -> &str {
+        &self.email
+    }
+
     pub const fn change_logged_in(&mut self, logged_in: bool) {
         self.logged_in = logged_in;
     }
@@ -167,6 +172,7 @@ pub async fn submit_text(
                 "title": post.get_title(),
                 "body": post.get_body(),
                 "author": post.get_author(),
+                "email": post.get_email(),
                 "date": post.get_date().to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
                 "logged_in": post.is_logged_in(),
                 })

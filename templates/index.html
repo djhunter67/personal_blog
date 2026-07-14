@@ -28,7 +28,7 @@
       hx-swap="innerHTML"
       hx-push-url="true"
       hx-target="click">
-      TESTIMONIALS
+      CREATE POST
     </button>
     <button
       hx-get="/finances"
@@ -40,6 +40,7 @@
     </button>
   </section>
   <section id="main__info_cards">
+    {% if !content.is_empty() %}
     {% for (i,card) in content.iter().enumerate() %}
     <div class="card">
       <div class="card__header">
@@ -53,11 +54,11 @@
 	</p>
       </div>
     </div>
-    <section id="main__user_text">
-    <form
+    {% endfor %}
+{% else %}
+<form
       hx-post="/v1/submit_text"
-      hx-target="#card__{{ i }}"
-      hx-swap="outerHTML"
+      hx-swap="none"
       id="main__user_text__journaler"
        />
     <input id="main__user_text__journaler__title" type="text" name="title" placeholder="Place title here" value="test title" required />
@@ -65,9 +66,8 @@
 <input id="main__user_text__journaler__author" type="text" name="author" placeholder="text author here" value="Hunter, Christerpher" required/>
 <input id="hidden_input" type="text" name="email" value={{user}} hidden>
       <button type="submit">Submit</button>
-    </form>
-  </section>
-    {% endfor %}
+</form>
+{% endif %}
   </section>
   
 </div>
