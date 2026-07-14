@@ -18,7 +18,6 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
-use chrono::DateTime;
 use futures::{StreamExt, stream};
 use tracing::{info, instrument};
 
@@ -48,26 +47,7 @@ pub async fn index(
 
         let var_name = IndexTemplate::new(
             "Home",
-            vec![
-                BlogPost::new(
-                    "new post".to_string(),
-                    "the body of the post".to_string(),
-                    "Some Author".to_string(),
-                    DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
-                        .expect("Failed to parse date")
-                        .with_timezone(&chrono::Utc),
-                    false,
-                ),
-                BlogPost::new(
-                    "new post".to_string(),
-                    "The body of the post".to_string(),
-                    "Some new Author".to_string(),
-                    DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
-                        .expect("Failed to parse date")
-                        .with_timezone(&chrono::Utc),
-                    false,
-                ),
-            ],
+            vec![BlogPost::default(), BlogPost::default()],
             &email,
         );
 
@@ -134,7 +114,8 @@ pub async fn index(
                 }
                 .collection(&BlogPost::to_name());
 
-            let filter = mongodb::bson::doc! { "title": "test title" };
+            let filter = mongodb::bson::doc! { "email": &email };
+            tracing::warn!("The email to check against: {email:#?}");
 
             // Each user can have more than one blog post, so we need to find all of them
             match db.find(filter).await {

@@ -26,6 +26,7 @@ pub struct BlogPost {
     title: String,
     body: String,
     author: String,
+    email: String,
     #[serde(default)]
     date: DateTime<chrono::Utc>,
     #[serde(default)]
@@ -41,6 +42,7 @@ impl BlogPost {
         title: String,
         body: String,
         author: String,
+        email: String,
         date: DateTime<chrono::Utc>,
         logged_in: bool,
     ) -> Self {
@@ -59,6 +61,7 @@ impl BlogPost {
             title,
             body,
             author,
+            email,
             date,
             logged_in,
         }
@@ -110,6 +113,7 @@ impl Default for BlogPost {
             title: String::new(),
             body: String::new(),
             author: String::new(),
+            email: String::new(),
             logged_in: false,
             date: chrono::Utc::now(),
         }
@@ -154,7 +158,7 @@ pub async fn submit_text(
                         ));
                     }
                 }
-                .collection("BlogPosts");
+                .collection(&BlogPost::to_name());
 
             tracing::info!("Post: {:#?}", post.get_body());
 
