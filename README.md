@@ -15,9 +15,14 @@ The design and business logic of the site are to be a blog type of personal log 
 
 
 ## TODO
-- [ ] insert a user login (The app will be available over the internet)
 - [ ] implement user authorization 
-- [X] implement user athentication
+  - [ ] Remove or allow items to show up on the page if the user is logged in
+- [ ] implement user athentication
+  - [X] insert a user login (The app will be available over the internet)
+  - [X] Register a new user
+  - [X] Log in registered users
+  - [X] Deny logging in unregistered users
+  - [ ] Create password reset
 - [X] Mongodb to save user information
 - [X] Hash and salt user passwords
 - [X] Write tests to ensure functionality user authentication
@@ -26,3 +31,7 @@ The design and business logic of the site are to be a blog type of personal log 
 - [ ] Implement the mobile view of the web application
 - [X] Setup Redis as a middle layer for near realtime retrieval
 - [ ] Deploy the site to be self-hosted on the internet via a raspberry pi 4
+
+## Completion Criteria
+This project is deemed complete when I can log in from anywhere, read, and write posts.
+  

@@ -10,7 +10,7 @@ mongo:
  connection_timeout: 1
 
 redis:
-  uri: "redis://:ChangeThisPassword@10.20.20.29:32379"
+  uri: "redis://:ChangeThisPassword@10.20.20.202:6379"
   key: "session:"
   pool_size: 1
   pool_max_open: 16

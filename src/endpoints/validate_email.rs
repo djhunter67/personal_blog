@@ -8,7 +8,7 @@ pub async fn validate_email(email: web::Query<HashMap<String, String>>) -> HttpR
     tracing::warn!("The raw data received: {email:#?}");
 
     email
-        .get("email")
+        .get("email_input")
         .map(std::string::String::as_str)
         .map_or_else(
             || {

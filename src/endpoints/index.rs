@@ -2,7 +2,11 @@ use std::task::Poll;
 
 // use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
 
-use crate::endpoints::user_input::BlogPost;
+use crate::{
+    endpoints::user_input::BlogPost,
+    models::{mongo, redis_conf},
+    settings,
+};
 
 use super::templates::IndexTemplate;
 use actix_web::{
@@ -15,7 +19,7 @@ use actix_web::{
 };
 use askama::Template;
 use chrono::DateTime;
-use futures::stream;
+use futures::{StreamExt, stream};
 use tracing::{info, instrument};
 
 #[allow(clippy::future_not_send)]
@@ -24,116 +28,150 @@ use tracing::{info, instrument};
     level = "debug",
     target = "web_app_bloodhound",
     fields(samples = 25, title = "Home"),
-    skip(_redis, _req)
+    skip(redis, req, mongo)
 )]
 #[get("/")]
-pub async fn index(_req: HttpRequest, _redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
+pub async fn index(
+    req: HttpRequest,
+    redis: Data<r2d2::Pool<redis::Client>>,
+    mongo: Data<mongodb::Client>,
+) -> HttpResponse {
     info!("Serving main page");
 
     tracing::info!("About page loading");
-    //     let session_id = if let Some(cookie) = req.cookie("session_id") {
-    //         cookie.value().to_string()
-    //     } else {
-    //         tracing::error!("User cookie not found: {req:#?}");
+    let session_id = if let Some(cookie) = req.cookie("session_id") {
+        cookie.value().to_string()
+    } else {
+        tracing::error!("User cookie not found: {req:#?}");
 
-    //         let var_name = IndexTemplate {
-    //         title: "Home",
-    //         content: [".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-    // ", ".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-    // ",".lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-    // "].to_vec(),
-    //         version: "0.1.0",
-    // 	user: "NEW USER"
-    //     };
+        let email = String::from("unregistered@unregisterd_email.com");
 
-    //         let rendered = var_name.render().expect("Failed to render template");
+        let var_name = IndexTemplate::new(
+            "Home",
+            vec![
+                BlogPost::new(
+                    "new post".to_string(),
+                    "the body of the post".to_string(),
+                    "Some Author".to_string(),
+                    DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+                        .expect("Failed to parse date")
+                        .with_timezone(&chrono::Utc),
+                    false,
+                ),
+                BlogPost::new(
+                    "new post".to_string(),
+                    "The body of the post".to_string(),
+                    "Some new Author".to_string(),
+                    DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
+                        .expect("Failed to parse date")
+                        .with_timezone(&chrono::Utc),
+                    false,
+                ),
+            ],
+            &email,
+        );
 
-    //         // return HttpResponse::Unauthorized().body(rendered);
-    //         return HttpResponse::Ok().body(rendered);
-    //     };
+        let rendered = var_name.render().expect("Failed to render template");
 
-    //     let mut red_conn = match establish_connection(redis.get_ref().clone()) {
-    //         Ok(conn) => conn,
-    //         Err(err) => {
-    //             tracing::error!("Unable to acquire the redis connection: {err:#?}");
-    //             return HttpResponse::InternalServerError()
-    //                 .body(format!("Cache layer error: {err:#?}"));
-    //         }
-    //     };
+        return HttpResponse::Ok()
+            .content_type(ContentType::html())
+            .body(rendered);
+    };
 
-    //     tracing::info!("Creating the session key");
-    //     let session_key = format!(
-    //         "{}{}",
-    //         &settings::get()
-    //             .expect("Unable to procure the app settings")
-    //             .redis
-    //             .key,
-    //         session_id
-    //     );
+    let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!("Unable to acquire the redis connection: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Cache layer error: {err:#?}"));
+        }
+    };
 
-    //     tracing::info!("Searching for the session key: {session_key}");
-    //     let user = match redis::cmd("GET")
-    //         .arg(&session_key)
-    //         .query::<Option<String>>(&mut red_conn)
-    //     {
-    //         Ok(result) => result,
-    //         Err(err) => {
-    //             tracing::error!("Error accessing the cache layer: {err:#?}");
-    //             return HttpResponse::InternalServerError()
-    //                 .body(format!("Unable to acquire the cache layer: {err:#?}"));
-    //         }
-    //     };
-
-    //     tracing::warn!("The session id: {session_key}");
-    //     user.map_or_else(
-    //         || {
-    // 	    tracing::error!("Unable to procure the user based on the session key");
-    // 	    let error_template = ErrorPage {
-    // 		title: "Cache-Error",
-    // 		code: 500,
-    // 		error: "Session key live but no user data associated with the session key",
-    // 		message: "Logout, if possible, and log back in"
-    // 	    };
-
-    // 	    let rendered = error_template.render().expect("unable to render the error template");
-    // 	    HttpResponse::Unauthorized().body(rendered)
-    // 	},
-    //         |email| {
-
-    let email = String::from("some_email@email.com");
-
-    let var_name = IndexTemplate::new(
-        "Home",
-        vec![
-            BlogPost::new(
-                "new post".to_string(),
-                "the body of the post".to_string(),
-                "Some Author".to_string(),
-                DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
-                    .expect("Failed to parse date")
-                    .with_timezone(&chrono::Utc),
-                false,
-            ),
-            BlogPost::new(
-                "new post".to_string(),
-                "The body of the post".to_string(),
-                "Some new Author".to_string(),
-                DateTime::parse_from_rfc3339("2024-06-01T12:00:00Z")
-                    .expect("Failed to parse date")
-                    .with_timezone(&chrono::Utc),
-                false,
-            ),
-        ],
-        &email,
+    tracing::info!("Creating the session key");
+    let session_key = format!(
+        "{}{}",
+        &settings::get()
+            .expect("Unable to procure the app settings")
+            .redis
+            .key,
+        session_id
     );
 
-    let rendered = var_name.render().expect("Failed to render template");
+    tracing::info!("Searching for the session key: {session_key}");
+    let user = match redis::cmd("GET")
+        .arg(&session_key)
+        .query::<Option<String>>(&mut red_conn)
+    {
+        Ok(result) => result,
+        Err(err) => {
+            tracing::error!("Error accessing the cache layer: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to acquire the cache layer: {err:#?}"));
+        }
+    };
 
-    HttpResponse::Ok()
-        .content_type(ContentType::html())
-        .body(rendered)
-    // },
-    // )
+    tracing::warn!("The session id: {session_key}");
+    let mut blog_post: Vec<BlogPost> = Vec::new();
+    match user.clone() {
+        None => {
+            tracing::warn!("User is not logged in: {user:#?}");
+            let var_name = IndexTemplate::new("Home", blog_post, "None");
+
+            let rendered = var_name.render().expect("Failed to render template");
+            HttpResponse::Ok().body(rendered)
+        }
+        Some(email) => {
+            // Get the previous blog posts from the database
+            let db: mongodb::Collection<BlogPost> =
+                match mongo::establish_connection(mongo.get_ref().clone()).await {
+                    Ok(collection) => collection,
+                    Err(err) => {
+                        tracing::error!("Error accessing the database: {err:#?}");
+                        return HttpResponse::InternalServerError().body(format!(
+                            "Unable to acquire the database connection: {err:#?}"
+                        ));
+                    }
+                }
+                .collection(&BlogPost::to_name());
+
+            let filter = mongodb::bson::doc! { "title": "test title" };
+
+            // Each user can have more than one blog post, so we need to find all of them
+            match db.find(filter).await {
+                Ok(mut user_cursor) => {
+                    tracing::info!("User found: {user_cursor:#?}");
+
+                    while let Some(result) = user_cursor.next().await {
+                        match result {
+                            Ok(document) => {
+                                blog_post.push(document);
+                            }
+                            Err(err) => {
+                                tracing::error!("Error retrieving document: {err:#?}");
+                                return HttpResponse::InternalServerError()
+                                    .body(format!("Error retrieving document: {err:#?}"));
+                            }
+                        }
+                    }
+                }
+
+                Err(err) => {
+                    tracing::error!("Error accessing the database: {err:#?}");
+                    return HttpResponse::InternalServerError().body(format!(
+                        "Unable to acquire the database connection: {err:#?}"
+                    ));
+                }
+            }
+
+            let var_name = IndexTemplate::new("Home", blog_post, &email);
+
+            let rendered = var_name.render().expect("Failed to render template");
+
+            HttpResponse::Ok()
+                .content_type(ContentType::html())
+                .body(rendered)
+        }
+    }
 }
 
 #[allow(clippy::future_not_send)]

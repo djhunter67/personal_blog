@@ -1,4 +1,4 @@
-use std::{fmt::Display, sync::Arc};
+use std::fmt::Display;
 
 use actix_web::{
     HttpRequest, HttpResponse, post,
@@ -9,21 +9,22 @@ use mongodb::{
     Collection,
     bson::{Document, doc},
 };
+use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    models::{mongo::establish_connection, redis_conf},
+    models::{
+        mongo,
+        redis_conf::{self},
+    },
     settings,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlogPost {
-    #[serde(rename = "text_title")]
     title: String,
-    #[serde(rename = "text_body")]
     body: String,
-    #[serde(rename = "text_author")]
     author: String,
     #[serde(default)]
     date: DateTime<chrono::Utc>,
@@ -32,6 +33,10 @@ pub struct BlogPost {
 }
 
 impl BlogPost {
+    #[must_use]
+    pub fn to_name() -> String {
+        String::from("BlogPosts")
+    }
     pub fn new(
         title: String,
         body: String,
@@ -140,7 +145,7 @@ pub async fn submit_text(
 
             // Save the post to the database
             let db: Collection<Document> =
-                match establish_connection(mongo.get_ref().clone()).await {
+                match mongo::establish_connection(mongo.get_ref().clone()).await {
                     Ok(db) => db,
                     Err(err) => {
                         tracing::error!("Error establishing connection to database: {err:#?}");
@@ -164,6 +169,28 @@ pub async fn submit_text(
                 .await
                 .expect("Unable to insert post into database");
 
+            // Save the object ID to Redis with the user's session ID as the key
+            let session_id = req
+                .cookie("session_id")
+                .expect("No session cookie found")
+                .value()
+                .to_string();
+
+            let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+                Ok(conn) => conn,
+                Err(err) => {
+                    tracing::error!("Error establishing connection to Redis: {err:#?}");
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Error establishing connection to Redis: {err:#?}"));
+                }
+            };
+
+            let cache_key = format!("blog_post:{session_id}");
+
+            red_conn
+                .set::<String, String, ()>(cache_key, oid.inserted_id.to_string())
+                .expect("Unable to set session ID in Redis");
+
             return HttpResponse::Ok().body(format!("{}", oid.inserted_id));
         }
 
@@ -175,9 +202,9 @@ pub async fn submit_text(
 }
 
 /// # Errors
-///     - If the user is not logged in, return an `HttpResponse::Unauthorized` error.
+///   If the user is not logged in, return an "`HttpResponse::Unauthorized`" error.
 /// # Panics
-///     - If the `redis` connection pool is not available, the function will panic.
+///   If the "`redis`" connection pool is not available, the function will panic.
 pub fn validate_user(
     req: &HttpRequest,
     redis: &Data<r2d2::Pool<redis::Client>>,
