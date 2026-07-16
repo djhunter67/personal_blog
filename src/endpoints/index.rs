@@ -45,7 +45,7 @@ pub async fn index(
 
         let email = String::from("unregistered@unregisterd_email.com");
 
-        let var_name = IndexTemplate::new("Home", vec![BlogPost::default()], &email);
+        let var_name = IndexTemplate::new("Home", vec![], &email);
 
         let rendered = var_name.render().expect("Failed to render template");
 

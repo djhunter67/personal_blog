@@ -51,14 +51,6 @@ async fn run(
                 panic!("Application cannot start: {err:#?}")
             }
         };
-    // let mongo_settings = match settings::get() {
-    //     Ok(settings) => settings,
-    //     Err(err) => {
-    //         tracing::error!("Unable to acquire database configurtation: {err:#?}");
-    //         panic!("Application cannot start: {err:#?}")
-    //     }
-    // }
-    // .mongo;
 
     let mongo_pool: mongodb::Client = match mongo_pool.connect() {
         Ok(conn) => conn,

@@ -122,13 +122,6 @@ pub async fn login_user(
         // TODO: Change this from an error to a warn
         tracing::error!("cache-miss");
 
-        // Mongodb check of the user
-        // let db: mongodb::Collection<bson::Document> = mongo.collection(
-        //     &settings::get()
-        //         .expect("Unable to acquire settings")
-        //         .mongo
-        //         .collection,
-        // );
         let db: mongodb::Collection<LoginChecker> =
             match mongo::establish_connection(mongo.get_ref().clone()).await {
                 Ok(db) => db,
