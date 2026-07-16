@@ -3,7 +3,8 @@ use std::{env, fs};
 /// This will change the file multiple times per build.
 /// This build.rs file will work in tandem with the commit
 /// and push hooks to change the secret being injected here.
-const MONGO_LOCATION: &str = "10.20.20.205:27017/admin?replicaSet=rs0";
+const MONGO_LOCATION: &str =
+    "10.20.20.205:27017/?authMechanism=SCRAM-SHA-256&directConnection=true&replicaSet=rs0";
 const REDIS_LOCATION: &str = "10.20.20.202:6379";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
