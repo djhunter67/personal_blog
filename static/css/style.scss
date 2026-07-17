@@ -53,6 +53,9 @@ $light-yellow: hsl(60, 100%, 90%);
 	&__nav {
 	    grid-row: 1 / 2;
 	    grid-column: 1 / -1;
+	    display: grid;
+	    grid-template-columns: 1fr 1fr 1fr 1fr;
+	    grid-template-rows: auto;
 
 	    &__home {
 		background-color: white;
@@ -93,6 +96,7 @@ $light-yellow: hsl(60, 100%, 90%);
 		border-radius: 5px;
 		padding: 8px 16px;
 		margin: 0;
+		width: 4rem;
 		font-size: 1rem;
 		cursor: pointer;
 		transition: background-color 0.3s ease;
@@ -105,10 +109,13 @@ $light-yellow: hsl(60, 100%, 90%);
 	    &__settings {
 		background-image: url('/static/settings_icon');
 		background-size: cover;
+		width: 2rem;
+		height: 2rem;
 		border: none;
 		cursor: pointer;
-		width: 100px;
-		height: 75px;
+		grid-column: 4 / 5;
+		grid-row: 1 / 2;
+		justify-self: end;;
 	    }
 	}
 	
