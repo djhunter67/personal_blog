@@ -26,6 +26,7 @@ struct RegisterTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
+    is_logged_in: bool,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -59,6 +60,7 @@ pub async fn register_template() -> HttpResponse {
         title: "Registration",
         content: [user_name, user_password_1, user_password_2].to_vec(),
         user: "logged in user",
+        is_logged_in: false,
     };
 
     let template = template.render().expect("About page render error");

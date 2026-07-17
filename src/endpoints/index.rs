@@ -43,9 +43,8 @@ pub async fn index(
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
-        let email = String::from("unregistered@unregisterd_email.com");
-
-        let var_name = IndexTemplate::new("Home", vec![], &email);
+        let var_name = String::new();
+        let var_name = IndexTemplate::new("Home", vec![], &var_name, false);
 
         let rendered = var_name.render().expect("Failed to render template");
 
@@ -91,7 +90,7 @@ pub async fn index(
     match user.clone() {
         None => {
             tracing::warn!("User is not logged in: {user:#?}");
-            let var_name = IndexTemplate::new("Home", blog_post, "None");
+            let var_name = IndexTemplate::new("Home", blog_post, "None", false);
 
             let rendered = var_name.render().expect("Failed to render template");
             HttpResponse::Ok().body(rendered)
@@ -140,7 +139,7 @@ pub async fn index(
                 }
             }
 
-            let var_name = IndexTemplate::new("Home", blog_post, &email);
+            let var_name = IndexTemplate::new("Home", blog_post, &email, true);
 
             let rendered = var_name.render().expect("Failed to render template");
 

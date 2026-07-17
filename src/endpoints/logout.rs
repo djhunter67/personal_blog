@@ -50,7 +50,7 @@ pub async fn logout(
         }
     };
 
-    let index_template = IndexTemplate::new("Logged out", vec![], "None");
+    let index_template = IndexTemplate::new("Logged out", vec![], "None", false);
 
     HttpResponse::Ok().body(
         index_template

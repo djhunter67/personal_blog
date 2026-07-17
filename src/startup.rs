@@ -87,7 +87,8 @@ async fn run(
                     .service(templates::prof_headshot)
                     .service(templates::spinner)
                     .service(templates::github)
-                    .service(templates::linkedin),
+                    .service(templates::linkedin)
+                    .service(templates::settings_icon),
             )
             .service(index::index)
             .service(health::health_check)

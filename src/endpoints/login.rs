@@ -22,6 +22,7 @@ struct LoginTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
     user: &'a str,
+    is_logged_in: bool,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -56,6 +57,7 @@ pub async fn login_template() -> HttpResponse {
         title: "Login",
         content: [user_login, user_password].to_vec(),
         user: "logged in user",
+        is_logged_in: true,
     };
 
     let template = template.render().expect("Login page render error");
@@ -150,8 +152,8 @@ pub async fn login_user(
                     user_found
                 } else {
                     tracing::error!("No user data found in the database");
-                    return HttpResponse::InternalServerError()
-                        .body("No user data matching the supplied email");
+                    // Change this to unauthorized
+                    return HttpResponse::Ok().body("No user data matching the supplied email");
                 }
             }
             Err(err) => {

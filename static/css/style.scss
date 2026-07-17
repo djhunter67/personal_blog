@@ -101,6 +101,15 @@ $light-yellow: hsl(60, 100%, 90%);
 		    background-color: lightgray;
 		}
 	    }
+
+	    &__settings {
+		background-image: url('/static/settings_icon');
+		background-size: cover;
+		border: none;
+		cursor: pointer;
+		width: 100px;
+		height: 75px;
+	    }
 	}
 	
 	&__logo {

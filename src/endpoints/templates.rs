@@ -13,16 +13,23 @@ pub struct IndexTemplate<'a> {
     pub content: Vec<BlogPost>,
     pub version: &'a str,
     pub user: &'a str,
+    pub is_logged_in: bool,
 }
 
 impl<'a> IndexTemplate<'a> {
     #[must_use]
-    pub const fn new(title: &'a str, content: Vec<BlogPost>, user: &'a str) -> Self {
+    pub const fn new(
+        title: &'a str,
+        content: Vec<BlogPost>,
+        user: &'a str,
+        is_logged_in: bool,
+    ) -> Self {
         Self {
             title,
             content,
             version: env!("CARGO_PKG_VERSION"),
             user,
+            is_logged_in,
         }
     }
 }
@@ -283,6 +290,27 @@ pub async fn linkedin() -> Result<NamedFile, actix_web::Error> {
     info!("Serving linkedin.svg");
 
     let filename = "linkedIn.svg";
+    let path: PathBuf = ["static", "imgs", filename].iter().collect();
+
+    match NamedFile::open(path) {
+        Ok(file) => Ok(file),
+        Err(err) => {
+            error!("Error opening file -- {filename} -- : {err:#?}");
+            Err(actix_web::error::ErrorInternalServerError(err))
+        }
+    }
+}
+
+#[get("/settings_icon")]
+#[instrument(
+    name = "Serving settings_icon.svg",
+    level = "info",
+    target = "settings_icon"
+)]
+pub async fn settings_icon() -> Result<NamedFile, actix_web::Error> {
+    info!("Serving settings_icon");
+
+    let filename = "gears_001.jpg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
 
     match NamedFile::open(path) {
