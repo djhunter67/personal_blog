@@ -6,6 +6,9 @@ use tracing::{error, info, instrument};
 
 use super::user_input::BlogPost;
 
+/// # TODO
+///
+/// Dark Theme
 #[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate<'a> {

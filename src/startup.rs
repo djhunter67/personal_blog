@@ -1,5 +1,5 @@
 use crate::endpoints::{
-    self, health, index, login, logout, register, templates, user_input, validate_email,
+    self, health, index, login, logout, register, settings, templates, user_input, validate_email,
 };
 use crate::models::r2d2_mongodb::client_manager::MongoClientManager;
 use crate::settings::Settings;
@@ -104,6 +104,7 @@ async fn run(
                     .service(logout::logout)
                     .service(register::register_template)
                     .service(register::register_user)
+                    .service(settings::settings_template)
                     .service(validate_email::validate_email)
                     .service(user_input::submit_text),
             )

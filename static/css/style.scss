@@ -54,8 +54,7 @@ $light-yellow: hsl(60, 100%, 90%);
 	    grid-row: 1 / 2;
 	    grid-column: 1 / -1;
 	    display: grid;
-	    grid-template-columns: 1fr 1fr 1fr 1fr;
-	    grid-template-rows: auto;
+	    grid-template-columns: repeat(auto-fit, minmax(1.625rem, 0.5fr));
 
 	    &__home {
 		background-color: white;
@@ -64,6 +63,7 @@ $light-yellow: hsl(60, 100%, 90%);
 		border-radius: 5px;
 		padding: 8px 16px;
 		margin: 0;
+		width: min-content;
 		font-size: 1rem;
 		cursor: pointer;
 		transition: background-color 0.3s ease;
@@ -80,6 +80,7 @@ $light-yellow: hsl(60, 100%, 90%);
 		border-radius: 5px;
 		padding: 8px 16px;
 		margin: 0;
+		width: min-content;
 		font-size: 1rem;
 		cursor: pointer;
 		transition: background-color 0.3s ease;
@@ -96,7 +97,7 @@ $light-yellow: hsl(60, 100%, 90%);
 		border-radius: 5px;
 		padding: 8px 16px;
 		margin: 0;
-		width: 4rem;
+		width: min-content;
 		font-size: 1rem;
 		cursor: pointer;
 		transition: background-color 0.3s ease;
@@ -159,6 +160,7 @@ $light-yellow: hsl(60, 100%, 90%);
     @include meta.load-css("_login");
     @include meta.load-css("_registration");
     @include meta.load-css("_error");
+    @include meta.load-css("_settings");
 }
 
 #info_buttons {

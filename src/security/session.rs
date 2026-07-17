@@ -2,11 +2,17 @@ use actix_web::{
     HttpResponse,
     cookie::{Cookie, time::Duration},
 };
+use askama::Template;
 use redis::Commands;
 use uuid::Uuid;
 
+use crate::endpoints::login::LoginTemplate;
+
 use super::login::LoginChecker;
 
+/// # Panics
+///
+/// If the cookie cannot be built, the function will panic.
 pub async fn create_session(
     user: &LoginChecker,
     mut redis: r2d2::PooledConnection<redis::Client>,
@@ -33,10 +39,16 @@ pub async fn create_session(
         .max_age(Duration::seconds(86400))
         .finish();
 
-    // Return the response with the cookie attached
-    HttpResponse::Ok()
-        .cookie(session_cookie)
-        .body("Login successful. Session cookie set")
+    let template = LoginTemplate {
+        title: "Login",
+        content: ["some_email@email", "some_password"].to_vec(),
+        user: &user.get_email(),
+        is_logged_in: true,
+    };
+
+    let render = template.render().expect("unable to render web page");
+
+    HttpResponse::Ok().cookie(session_cookie).body(render)
 }
 
 #[cfg(test)]

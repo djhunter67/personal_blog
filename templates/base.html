@@ -28,6 +28,27 @@
 	    hx-target-error="#error_template"
 	    >HOME
 	  </button>
+	  
+	  {% if is_logged_in %}
+	  <button
+	    id="template_pages__top__nav__login"
+	    hx-get="/v1/logout"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="false"
+	    >
+	    LOGOUT
+	  </button>
+	  <button
+	    id="template_pages__top__nav__settings"
+	    hx-get="/v1/settings"
+	    hx-target="#template_pages"
+	    hx-swap="outerHTML"
+	    hx-push-url="true"
+	    hx-trigger="click">
+	  </button>
+	  {% endif %}
+	  {% if !is_logged_in %}
 	  <button
 	    id="template_pages__top__nav__login"
 	    hx-get="/v1/login"
@@ -38,17 +59,6 @@
 	    >
 	    LOGIN
 	  </button>
-	  {% if is_logged_in %}
-	  <button
-	    id="template_pages__top__nav__login"
-	    hx-get="/v1/logout"
-	    hx-target="#template_pages"
-	    hx-swap="outerHTML"
-	    >
-	    LOGOUT
-	  </button>
-	  {% endif %}
-	  {% if !is_logged_in %}
 	  <button
 	    id="template_pages__top__nav__signup"
 	    hx-get="/v1/register"
@@ -60,14 +70,7 @@
 	    REGISTER
 	  </button>
 	  {% endif %}
-	  <button
-	    id="template_pages__top__nav__settings"
-	    hx-get="/v1/settings"
-	    hx-target="#template_pages"
-	    hx-swap="outerHTML"
-	    hx-push-url="true"
-	    hx-trigger="click">
-	  </button>    
+	      
 	</nav>
 	<aside id="template_pages__top__logo">
 	  <img src="https://i.pravatar.cc/300" alt="Personal blog default logo" width="300px" height="350px">

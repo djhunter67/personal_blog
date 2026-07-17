@@ -34,8 +34,7 @@ body {
   grid-row: 1/2;
   grid-column: 1/-1;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  grid-template-rows: auto;
+  grid-template-columns: repeat(auto-fit, minmax(1.625rem, 0.5fr));
 }
 #template_pages__top__nav__home {
   background-color: white;
@@ -44,6 +43,7 @@ body {
   border-radius: 5px;
   padding: 8px 16px;
   margin: 0;
+  width: min-content;
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -58,6 +58,7 @@ body {
   border-radius: 5px;
   padding: 8px 16px;
   margin: 0;
+  width: min-content;
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -72,7 +73,7 @@ body {
   border-radius: 5px;
   padding: 8px 16px;
   margin: 0;
-  width: 4rem;
+  width: min-content;
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
@@ -391,6 +392,48 @@ body {
   background-color: darkred;
   transform: translateY(-1px);
   transition: all 0.2s ease-in-out;
+}
+#template_pages #settings {
+  background-color: hsl(0, 100%, 90%);
+  grid-row: 3/-1;
+  grid-column: 1/-1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  justify-content: center;
+  align-items: center;
+  max-height: fit-content;
+  min-width: 100%;
+  padding: 1rem;
+}
+#template_pages #settings h1 {
+  height: 4rem;
+  text-align: center;
+}
+#template_pages #settings__center {
+  border: 1rem black solid;
+  padding: 1rem;
+}
+#template_pages #settings__center form {
+  border: 10px red solid;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem 0;
+}
+#template_pages #settings__center form button {
+  padding-top: 1rem;
+}
+#template_pages #settings__response {
+  height: fit-content;
+  width: 85%;
+  padding: 1rem;
+  border: blue 1rem solid;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+#template_pages #settings__response h4 {
+  font-size: x-large;
 }
 
 #info_buttons {

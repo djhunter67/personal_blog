@@ -18,13 +18,23 @@ use crate::{
 
 #[derive(Template)]
 #[template(path = "login.html")]
-struct LoginTemplate<'a> {
-    title: &'a str,
-    content: Vec<&'a str>,
-    user: &'a str,
-    is_logged_in: bool,
+pub struct LoginTemplate<'a> {
+    pub title: &'a str,
+    pub content: Vec<&'a str>,
+    pub user: &'a str,
+    pub is_logged_in: bool,
 }
 
+/// # TODO:
+///
+/// Activity timestamps
+/// Usage analytics
+/// Retain login history
+/// Delete user account
+/// Successful logins
+/// Failed login attempts
+/// Password changed before
+/// Data exported
 #[derive(Deserialize, Debug, Serialize)]
 pub struct LoginUser {
     #[serde(rename = "email_input")]
@@ -57,7 +67,7 @@ pub async fn login_template() -> HttpResponse {
         title: "Login",
         content: [user_login, user_password].to_vec(),
         user: "logged in user",
-        is_logged_in: true,
+        is_logged_in: false,
     };
 
     let template = template.render().expect("Login page render error");

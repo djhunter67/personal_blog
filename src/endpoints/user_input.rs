@@ -22,6 +22,23 @@ use crate::{
     settings,
 };
 
+/// # TODO
+///
+/// Editing of posts
+/// Automatic draft saving
+/// Autosave interval
+/// Categories of posts
+/// Show word count
+/// Journaling landing page
+/// Sort order of posts
+/// Entries per page and pagination
+/// Confirmation before deletion && deletion
+/// Trash retention period
+/// Time zone metadata per post
+/// Export journal entries to Markdown or JSON
+/// Download all images and journal entries
+/// Restore recently deleted posts
+/// View the data the application stores
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BlogPost {
     title: String,

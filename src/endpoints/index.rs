@@ -1,7 +1,5 @@
 use std::task::Poll;
 
-// use crate::{endpoints::templates::ErrorPage, models::redis_conf::establish_connection, settings};
-
 use crate::{
     endpoints::user_input::BlogPost,
     models::{mongo, redis_conf},
@@ -115,7 +113,7 @@ pub async fn index(
             // Each user can have more than one blog post, so we need to find all of them
             match db.find(filter).await {
                 Ok(mut user_cursor) => {
-                    tracing::info!("User found: {user_cursor:#?}");
+                    tracing::info!("User found!");
 
                     while let Some(result) = user_cursor.next().await {
                         match result {

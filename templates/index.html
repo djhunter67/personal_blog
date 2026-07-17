@@ -13,31 +13,7 @@
         ABOUT
       </button>    
       <div id="any_error"></div>
-    </div>    
-    <button
-      hx-get="/schedule"
-      hx-target="#main__info_cards"
-      hx-swap="innerHTML"
-      hx-push-url="true"
-      hx-trigger="click">
-      SCHEDULE
-    </button>
-    <button
-      hx-get="/testimonials"
-      hx-target="#main__info_cards"
-      hx-swap="innerHTML"
-      hx-push-url="true"
-      hx-target="click">
-      CREATE POST
-    </button>
-    <button
-      hx-get="/finances"
-      hx-target="#main__info_cards"
-      hx-swap="innerHTML"
-      hx-push-url="true"
-      hx-trigger="click">
-      FINANCES
-    </button>
+    </div>
   </section>
   <section id="main__info_cards">
     {% for (i,card) in content.iter().enumerate() %}
