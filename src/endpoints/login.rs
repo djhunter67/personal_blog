@@ -100,7 +100,7 @@ pub async fn login_user(
     // Check redis first
     tracing::info!("Checking the cache-layer");
     let cache_key = format!("user:auth:{useremail}");
-    let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+    let mut redis_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
@@ -134,27 +134,27 @@ pub async fn login_user(
         // TODO: Change this from an error to a warn
         tracing::error!("cache-miss");
 
-        let db: mongodb::Collection<LoginChecker> =
-            match mongo::establish_connection(mongo.get_ref().clone()).await {
-                Ok(db) => db,
+        let db: mongodb::Collection<LoginChecker> = match mongo::establish_connection(&mongo).await
+        {
+            Ok(db) => db,
+            Err(err) => {
+                tracing::error!("Unable to procure the database: {err:#?}");
+                return HttpResponse::InternalServerError()
+                    .body(format!("Unable to procure the database: {err:#?}"));
+            }
+        }
+        .collection(
+            &match settings::get() {
+                Ok(settings) => settings,
                 Err(err) => {
-                    tracing::error!("Unable to procure the database: {err:#?}");
+                    tracing::error!("Unable to procure database settings: {err:#?}");
                     return HttpResponse::InternalServerError()
-                        .body(format!("Unable to procure the database: {err:#?}"));
+                        .body(format!("Unable to procure the database settings: {err:#?}"));
                 }
             }
-            .collection(
-                &match settings::get() {
-                    Ok(settings) => settings,
-                    Err(err) => {
-                        tracing::error!("Unable to procure database settings: {err:#?}");
-                        return HttpResponse::InternalServerError()
-                            .body(format!("Unable to procure the database settings: {err:#?}"));
-                    }
-                }
-                .mongo
-                .collection,
-            );
+            .mongo
+            .collection,
+        );
 
         match db.find_one(filter).await {
             Ok(user) => {

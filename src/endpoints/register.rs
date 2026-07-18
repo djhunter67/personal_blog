@@ -107,16 +107,16 @@ pub async fn register_user(
         }
     };
 
-    let db: mongodb::Collection<RegistrationData> =
-        match mongo::establish_connection(mongo.get_ref().clone()).await {
-            Ok(db) => db,
-            Err(err) => {
-                tracing::error!("Unable to procure the database: {err:#?}");
-                return HttpResponse::InternalServerError()
-                    .body(format!("Unable to procure the database: {err:#?}"));
-            }
+    let db: mongodb::Collection<RegistrationData> = match mongo::establish_connection(&mongo).await
+    {
+        Ok(db) => db,
+        Err(err) => {
+            tracing::error!("Unable to procure the database: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .body(format!("Unable to procure the database: {err:#?}"));
         }
-        .collection(&mongo_settings.collection);
+    }
+    .collection(&mongo_settings.collection);
 
     // Check if the user exists
     let mut existing_query = db
@@ -163,8 +163,7 @@ pub async fn register_user(
             let auth_data = LoginChecker::new(email, encrypted_pw.get());
 
             if let Ok(json_data) = serde_json::to_string(&auth_data) {
-                let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone())
-                {
+                let mut redis_conn = match redis_conf::establish_connection(&redis) {
                     Ok(conn) => conn,
                     Err(err) => {
                         tracing::error!("Unable to procure the cache-layer connection: {err:#?}");

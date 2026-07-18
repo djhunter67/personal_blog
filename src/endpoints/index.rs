@@ -51,7 +51,7 @@ pub async fn index(
             .body(rendered);
     };
 
-    let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+    let mut red_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the redis connection: {err:#?}");
@@ -95,17 +95,17 @@ pub async fn index(
         }
         Some(email) => {
             // Get the previous blog posts from the database
-            let db: mongodb::Collection<BlogPost> =
-                match mongo::establish_connection(mongo.get_ref().clone()).await {
-                    Ok(collection) => collection,
-                    Err(err) => {
-                        tracing::error!("Error accessing the database: {err:#?}");
-                        return HttpResponse::InternalServerError().body(format!(
-                            "Unable to acquire the database connection: {err:#?}"
-                        ));
-                    }
+            let db: mongodb::Collection<BlogPost> = match mongo::establish_connection(&mongo).await
+            {
+                Ok(collection) => collection,
+                Err(err) => {
+                    tracing::error!("Error accessing the database: {err:#?}");
+                    return HttpResponse::InternalServerError().body(format!(
+                        "Unable to acquire the database connection: {err:#?}"
+                    ));
                 }
-                .collection(&BlogPost::to_name());
+            }
+            .collection(&BlogPost::to_name());
 
             let filter = mongodb::bson::doc! { "email": &email };
             tracing::warn!("The email to check against: {email:#?}");

@@ -1,6 +1,10 @@
 //! Initialize and return a connection to the ``MongoDb`` database.
 
-use mongodb::bson::{DateTime as BsonDateTime, oid::ObjectId};
+use mongodb::{
+    IndexModel,
+    bson::{DateTime as BsonDateTime, doc, oid::ObjectId},
+    options::IndexOptions,
+};
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument};
 
@@ -20,7 +24,7 @@ use crate::settings;
 /// # Panics
 ///  - If the connection pool could not be created
 pub async fn establish_connection(
-    manager: mongodb::Client,
+    manager: &mongodb::Client,
 ) -> Result<mongodb::Database, mongodb::error::Error> {
     info!("Get mongo connection pool");
     Ok(manager.database(&settings::get().expect("setings error").mongo.db))
@@ -40,6 +44,30 @@ pub struct JournalDraft {
     pub created_at: BsonDateTime,
     pub updated_at: BsonDateTime,
     pub revision: i64,
+}
+
+/// # Errors
+///
+/// - `mongodb::error::Error` if the index could not be created
+pub async fn create_journal_draft_indexes(
+    collection: &mongodb::Collection<JournalDraft>,
+) -> mongodb::error::Result<()> {
+    let options = IndexOptions::builder()
+        .name("one_active_draft_per_user".to_owned())
+        .unique(true)
+        .build();
+
+    let index = IndexModel::builder()
+        .keys(doc! {
+        "user_id": 1,
+
+        })
+        .options(options)
+        .build();
+
+    collection.create_index(index).await?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -87,7 +115,7 @@ mod tests {
             .connect()
             .unwrap();
 
-        let pool = establish_connection(manager).await;
+        let pool = establish_connection(&manager).await;
 
         // Assert that a connection has been established
         assert!(

@@ -56,7 +56,7 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         ));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+    let mut red_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the cache layer connection: {err:#?}");

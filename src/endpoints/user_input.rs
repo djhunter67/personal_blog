@@ -4,20 +4,23 @@ use actix_web::{
     HttpRequest, HttpResponse,
     http::header::ContentType,
     post,
-    web::{self, Data},
+    web::{self, Data, Form},
 };
 use askama::Template;
 use chrono::DateTime;
 use futures::StreamExt;
-use mongodb::{Collection, bson::doc};
+use mongodb::{
+    Collection,
+    bson::{self, doc},
+};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
     endpoints::templates::PostPart,
     models::{
-        mongo,
-        redis_conf::{self},
+        mongo::{self, JournalDraft},
+        redis_conf::{self, AuthenticationError, authenticated_user_id},
     },
     settings,
 };
@@ -251,17 +254,16 @@ pub async fn submit_text(
             post.change_logged_in(user_exists);
 
             // Save the post to the database
-            let db: Collection<BlogPost> =
-                match mongo::establish_connection(mongo.get_ref().clone()).await {
-                    Ok(db) => db,
-                    Err(err) => {
-                        tracing::error!("Error establishing connection to database: {err:#?}");
-                        return HttpResponse::InternalServerError().body(format!(
-                            "Error establishing connection to database: {err:#?}"
-                        ));
-                    }
+            let db: Collection<BlogPost> = match mongo::establish_connection(&mongo).await {
+                Ok(db) => db,
+                Err(err) => {
+                    tracing::error!("Error establishing connection to database: {err:#?}");
+                    return HttpResponse::InternalServerError().body(format!(
+                        "Error establishing connection to database: {err:#?}"
+                    ));
                 }
-                .collection(&BlogPost::to_name());
+            }
+            .collection(&BlogPost::to_name());
 
             tracing::info!("Post: {:#?}", post.get_body());
 
@@ -360,7 +362,7 @@ pub fn validate_user(
         )));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+    let mut red_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
@@ -399,5 +401,97 @@ pub fn validate_user(
     } else {
         tracing::info!("User is logged in: {user:#?}");
         Ok(true)
+    }
+}
+
+#[post("/draft/autosave")]
+pub async fn autosave_journal_draft(
+    req: HttpRequest,
+    mongo: Data<mongodb::Client>,
+    redis: Data<r2d2::Pool<redis::Client>>,
+    Form(input): Form<JournalDraftInput>,
+) -> HttpResponse {
+    let user_id = match authenticated_user_id(&req, &redis) {
+        Ok(user_id) => user_id,
+        Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
+            return HttpResponse::Unauthorized()
+                .body("Your session expired. The draft was not saved");
+        }
+        Err(AuthenticationError::Redis) => {
+            tracing::error!("Unable to access Redis during draft autosave");
+
+            return HttpResponse::ServiceUnavailable()
+                .body("Draft autosave is temporarily unavailable");
+        }
+    };
+
+    let title = input.title.trim();
+    let author = input.author.trim();
+
+    if title.chars().count() > 300 {
+        return HttpResponse::BadRequest().body("Draft was not saved: title is too long");
+    }
+    if input.body.chars().count() > 1_000_000 {
+        return HttpResponse::BadRequest().body("Draft was not saved: journal entry is too long");
+    }
+
+    if author.chars().count() > 200 {
+        return HttpResponse::BadRequest().body("Draft was not saved: author name is too long");
+    }
+
+    // Check if the meaningful fields have been filled in
+    if title.is_empty() && input.body.trim().is_empty() {
+        return HttpResponse::Ok().body("Begin typing to create a draft");
+    }
+
+    let drafts = mongo::establish_connection(&mongo)
+        .await
+        .expect("mongo error")
+        .collection::<JournalDraft>("journal_drafts");
+
+    let now = bson::DateTime::now();
+
+    let filter = doc! {
+    "user_id": user_id
+    };
+
+    let update = doc! {
+    "$set": {
+        "title": title,
+        "body": &input.body,
+        "author": author,
+        "updated_at": now,
+    },
+    "$setOnInsert": {
+        "_id": mongodb::bson::oid::ObjectId::new(),
+        "user_id": user_id,
+        "created_at": now,
+    },
+    "$inc": {
+        "revision": 1_i64
+    },
+    };
+
+    let update_result = drafts.update_one(filter, update).upsert(true).await;
+
+    match update_result {
+        Ok(_) => {
+            tracing::warn!("DB update successful for user_id: {user_id}");
+            let displayed_time = chrono::Utc::now().format("%Y-%m-%d %H:%S UTC");
+
+            HttpResponse::Ok()
+                .content_type("text/html; charset=utf-8")
+                .body(format!("Draft saved at {displayed_time}."))
+        }
+        Err(err) => {
+            tracing::error!(
+            ?err,
+            %user_id,
+            "Unable to autosave journal draft"
+            );
+
+            HttpResponse::InternalServerError()
+                .body("The draft could not be saved. Continue typing and try again")
+        }
     }
 }

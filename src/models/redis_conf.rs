@@ -1,10 +1,13 @@
 //! Initialize and return a connection to the ``Redis`` database.
 
+use actix_web::{HttpRequest, web::Data};
+use mongodb::bson::oid::ObjectId;
 use r2d2::PooledConnection;
 
+use redis::Commands;
+use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-#[must_use]
 #[instrument(
     name = "Establishing a connection to the Redis database",
     level = "info",
@@ -24,9 +27,59 @@ use tracing::instrument;
 ///
 /// Initialize and return a connection to the ``Redis`` database.
 pub fn establish_connection(
-    manager: r2d2::Pool<redis::Client>,
+    manager: &r2d2::Pool<redis::Client>,
 ) -> Result<PooledConnection<redis::Client>, redis::RedisResult<String>> {
     Ok(manager.get().expect("No Redis cache layer available"))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserSession {
+    pub user_id: String,
+    pub email: String,
+}
+
+#[derive(Debug)]
+pub enum AuthenticationError {
+    MissingSession,
+    InvalidSession,
+    Redis,
+}
+
+/// # Errors
+///
+/// - `AuthenticationError::MissingSession` if the session cookie is missing
+/// - `AuthenticationError::InvalidSession` if the session is invalid
+/// - `AuthenticationError::Redis` if there is an error connecting to Redis
+pub fn authenticated_user_id(
+    req: &HttpRequest,
+    redis_pool: &Data<r2d2::Pool<redis::Client>>,
+) -> Result<ObjectId, AuthenticationError> {
+    let session_cookie = req
+        .cookie("session_id")
+        .ok_or(AuthenticationError::MissingSession)?;
+
+    let session_key = format!(
+        "{}{}",
+        crate::settings::get()
+            .map_err(|_| AuthenticationError::InvalidSession)?
+            .redis
+            .key,
+        session_cookie.value()
+    );
+
+    let mut redis_conn =
+        establish_connection(redis_pool).map_err(|_| AuthenticationError::Redis)?;
+
+    let serialized_session: Option<String> = redis_conn
+        .get(session_key)
+        .map_err(|_| AuthenticationError::Redis)?;
+
+    let serialized_session = serialized_session.ok_or(AuthenticationError::InvalidSession)?;
+
+    let session: UserSession = serde_json::from_str(&serialized_session)
+        .map_err(|_| AuthenticationError::InvalidSession)?;
+
+    ObjectId::parse_str(session.user_id).map_err(|_| AuthenticationError::InvalidSession)
 }
 
 #[cfg(test)]

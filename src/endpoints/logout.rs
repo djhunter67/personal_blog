@@ -20,7 +20,7 @@ pub async fn logout(
 ) -> impl Responder {
     // extract the session key from the frontend
 
-    let mut redis_conn = match redis_conf::establish_connection(redis.get_ref().clone()) {
+    let mut redis_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
