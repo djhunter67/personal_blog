@@ -105,6 +105,7 @@ async fn run(
                     .service(register::register_template)
                     .service(register::register_user)
                     .service(settings::settings_template)
+                    .service(settings::settings_change)
                     .service(validate_email::validate_email)
                     .service(user_input::submit_text),
             )

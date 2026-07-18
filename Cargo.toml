@@ -70,6 +70,7 @@ base64 = "0.22.1"
 uuid = { version = "1.23.2", features = ["v4"] }
 config = "0.15.23"
 chrono = { version = "0.4.45", features = ["serde"] }
+actix-multipart = { version = "0.8.0", features = ["derive"] }
 
 [dev-dependencies]
 rstest = "0.24.0"

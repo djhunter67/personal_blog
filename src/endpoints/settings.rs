@@ -1,9 +1,8 @@
-use actix_web::{
-    HttpResponse, get,
-    web::{self, Data},
-};
+use std::collections::HashMap;
+
+use actix_multipart::form::{MultipartForm, tempfile::TempFile, text::Text};
+use actix_web::{HttpResponse, get, post, web::Data};
 use askama::Template;
-use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 #[derive(Template)]
@@ -14,16 +13,18 @@ struct SettingsTemplate<'a> {
     is_logged_in: bool,
 }
 
-#[derive(Deserialize, Serialize)]
-pub struct UserSettingsChange<'a> {
-    #[serde(rename = "email_input")]
-    email: &'a str,
-    #[serde(rename = "current_password")]
-    orig_pw: &'a str,
-    #[serde(rename = "new_password")]
-    new_pw: &'a str,
-    #[serde(rename = "new_password_2")]
-    new_pw_2: &'a str,
+#[derive(Debug, MultipartForm)]
+pub struct UserSettingsChange {
+    #[multipart(rename = "email_input")]
+    pub email: Option<Text<String>>,
+    #[multipart(rename = "current_password")]
+    pub orig_pw: Option<Text<String>>,
+    #[multipart(rename = "new_password")]
+    pub new_pw: Option<Text<String>>,
+    #[multipart(rename = "new_password_2")]
+    pub new_pw_2: Option<Text<String>>,
+    #[multipart(rename = "profile_image")]
+    pub image: Option<TempFile>,
 }
 
 #[get("/settings")]
@@ -46,42 +47,65 @@ pub async fn settings_template() -> HttpResponse {
     HttpResponse::Ok().body(template)
 }
 
-#[must_use = "The user would like to change some things"]
-pub fn settings_change(
+/// All input are optional
+#[post("/settings_change")]
+#[instrument(
+    name = "User settings change",
+    level = "info",
+    target = "personal journal web app",
+    skip(_mongo, _redis, body)
+)]
+pub async fn settings_change(
     _mongo: Data<mongodb::Client>,
     _redis: Data<r2d2::Pool<redis::Client>>,
-    body: &web::Form<UserSettingsChange<'static>>,
+    MultipartForm(body): MultipartForm<UserSettingsChange>,
 ) -> HttpResponse {
-    // let user_email = body.email;
-    // let orig_pw = body.orig_pw;
-    let new_pw = body.new_pw;
-    let new_pw_2 = body.new_pw_2;
+    let pw_1 = body.new_pw.as_ref().map(|pw| pw.as_str());
 
-    if !new_pw.eq(new_pw_2) {
-        return HttpResponse::BadRequest().body("Passwords do not match");
+    let pw_2 = body.new_pw_2.as_ref().map(|pw| pw.as_str());
+
+    if let Some(img) = &body.image {
+        tracing::warn!(
+            size = img.size / 1024,
+            file_name = ?img.file_name,
+            content_type = ?img.content_type,
+        );
+    } else {
+        tracing::warn!("No image uploaded");
     }
 
-    HttpResponse::Ok().into()
-}
-
-mod data_and_accounts {
-    use chrono::{DateTime, Utc};
-    use mongodb::bson::Uuid;
-
-    /// # TODO
-    ///
-    /// Forgotten password recovery
-    /// Email address verification
-    /// New login alerts
-    /// Password change alerts
-    /// Suspicious activity notifications
-    /// Account deletion confirmation
-    /// Email based two-factor authentication
-    pub struct _AccountEvent<'a> {
-        user_id: Uuid,
-        occurred_at: DateTime<Utc>,
-        ip_prefix: Option<&'a str>,
-        user_agent_summary: Option<&'a str>,
-        metadata: serde_json::Value,
+    // tracing::warn the size of the vector holding the image bytes
+    if let Some(img) = &body.image {
+        let img_bytes = img.size / 1024;
+        tracing::warn!("Image bytes size: {} MB", img_bytes / 100);
     }
+
+    if !pw_1.eq(&pw_2) {
+        // return HttpResponse::BadRequest().body("Passwords do not match");
+        return HttpResponse::Ok().body("Passwords do not match");
+    }
+    // tracing::warn!("Body: {:#?}", body);
+
+    HttpResponse::Ok().json(HashMap::from([
+        (
+            "email",
+            body.email
+                .map(actix_multipart::form::text::Text::into_inner),
+        ),
+        (
+            "orig_pw",
+            body.orig_pw
+                .map(actix_multipart::form::text::Text::into_inner),
+        ),
+        (
+            "new_pw",
+            body.new_pw
+                .map(actix_multipart::form::text::Text::into_inner),
+        ),
+        (
+            "new_pw_2",
+            body.new_pw_2
+                .map(actix_multipart::form::text::Text::into_inner),
+        ),
+    ]))
 }

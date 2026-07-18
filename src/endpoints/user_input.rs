@@ -143,6 +143,86 @@ impl Default for BlogPost {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct JournalDraftInput {
+    draft_id: Option<String>,
+    title: String,
+    body: String,
+    author: String,
+}
+
+impl JournalDraftInput {
+    pub const fn new(
+        draft_id: Option<String>,
+        title: String,
+        body: String,
+        author: String,
+    ) -> Self {
+        Self {
+            draft_id,
+            title,
+            body,
+            author,
+        }
+    }
+
+    #[must_use]
+    pub const fn get_draft_id(&self) -> Option<&String> {
+        self.draft_id.as_ref()
+    }
+
+    #[must_use]
+    pub fn get_title(&self) -> &str {
+        &self.title
+    }
+
+    #[must_use]
+    pub fn get_body(&self) -> &str {
+        &self.body
+    }
+
+    pub fn get_author(&self) -> &str {
+        &self.author
+    }
+
+    pub fn set_draft_id(&mut self, draft_id: Option<String>) {
+        self.draft_id = draft_id;
+    }
+
+    pub fn set_title(&mut self, title: String) {
+        self.title = title;
+    }
+
+    pub fn set_body(&mut self, body: String) {
+        self.body = body;
+    }
+
+    pub fn set_author(&mut self, author: String) {
+        self.author = author;
+    }
+
+    pub fn clear(&mut self) {
+        self.draft_id = None;
+        self.title.clear();
+        self.body.clear();
+        self.author.clear();
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.title.is_empty() && self.body.is_empty() && self.author.is_empty()
+    }
+}
+
+impl Display for JournalDraftInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Draft ID: {:?}, Title: {}, Body: {}, Author: {}",
+            self.draft_id, self.title, self.body, self.author
+        )
+    }
+}
+
 #[allow(clippy::future_not_send)]
 #[instrument(
     name = "User submits text",

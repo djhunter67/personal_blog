@@ -5,7 +5,8 @@
   <div id="settings__center">
     <form
       id="password_reset"
-      hx-post="/v1/settings"
+      enctype="multipart/form-data"
+      hx-post="/v1/settings_change"
       hx-target="#settings_response"
       hx-swap="innerHTML"
       >
@@ -16,7 +17,7 @@
 	name="display_name"
 	autocomplete="on"
 	placeholder="DISPLAY NAME"
-	/>
+	>
       <label for="new_password">NEW PASSWORD:</label>
       <input
 	type="password"
@@ -24,7 +25,7 @@
 	name="new_password"
 	autocomplete="on"
 	placeholder="NEW PASSWORD"
-	/>
+	>
       <label for="new_password_2">NEW PASSWORD (REPEAT):</label>
       <input
 	type="password"
@@ -32,18 +33,18 @@
 	name="new_password_2"
 	autocomplete="on"
 	placeholder="NEW PASSWORD (REPEAT)"
-	/>
+	>
       <label for="profile_image">PROFILE IMAGE</label>
       <input
 	type="file"
 	id="profile_image"
 	name="profile_image"
 	accept="image/*"
-	/>
+	>
       <button type="submit">SUBMIT</button>
     </form>
-    <div id="settings__response"></div>
   </div>
+  <div id="settings_response"></div>
   
 
 {% call super() %} {% endblock %}

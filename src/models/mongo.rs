@@ -1,5 +1,7 @@
 //! Initialize and return a connection to the ``MongoDb`` database.
 
+use mongodb::bson::{DateTime as BsonDateTime, oid::ObjectId};
+use serde::{Deserialize, Serialize};
 use tracing::{info, instrument};
 
 use crate::settings;
@@ -25,6 +27,19 @@ pub async fn establish_connection(
     // .into_inner()
     // .database(&settings.db)
     // .collection(&settings.collection)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JournalDraft {
+    #[serde(rename = "_id")]
+    pub id: ObjectId,
+    pub user_id: ObjectId,
+    pub title: String,
+    pub body: String,
+    pub author: String,
+    pub created_at: BsonDateTime,
+    pub updated_at: BsonDateTime,
+    pub revision: i64,
 }
 
 #[cfg(test)]
