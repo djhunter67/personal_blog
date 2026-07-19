@@ -30,45 +30,9 @@
       </div>
     </div>
     {% endfor %}
-    <form
-      id="main__user_text__journaler"
-      hx-post="/v1/submit_text"
-      hx-swap="outerHTML"
-      hx-target="#main__info_cards"
-      >
-    <label for="title">TITLE</label>
-    <input
-      id="main__user_text__journaler__title"
-      type="text"
-      name="title"
-      placeholder="Place title here"
-      required
-      >
-    <textarea
-      id="main__user_text__journaler__body"
-      name="body"
-      placeholder="Enter your text here"
-      rows="15"
-      ></textarea>
-    <label for="author">AUTHOR</label>
-    <input
-      id="main__user_text__journaler__author"
-      type="text"
-      name="author"
-      placeholder="Text author here"
-      value="Hunter, Christerpher"
-      required
-      >
-    <input
-      id="hidden_input"
-      type="text"
-      name="email"
-      value={{user}}
-      hidden
-      >
-    <p id="draft-status" role="status" aria-live="polite"></p>
-    <button type="submit">Submit</button>
-    </form>    
+    {% if is_logged_in %}
+    {% include "parts/journal_form.html" %}
+    {% endif %}
   </section>
 </div>
 

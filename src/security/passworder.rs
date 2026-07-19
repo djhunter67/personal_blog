@@ -19,7 +19,7 @@ impl PassWorder {
         skip(pw)
     )]
     pub fn new(pw: String) -> Self {
-        PassWorder { pw }
+        Self { pw }
     }
 
     #[instrument(

@@ -9,7 +9,7 @@ use tracing::instrument;
 #[template(path = "settings.html")]
 struct SettingsTemplate<'a> {
     title: &'a str,
-    user: &'a str,
+    user_id: &'a str,
     is_logged_in: bool,
 }
 
@@ -38,7 +38,7 @@ pub async fn settings_template() -> HttpResponse {
 
     let template = SettingsTemplate {
         title: "Settings",
-        user: "logged in user",
+        user_id: "logged in user",
         is_logged_in: true,
     };
 

@@ -42,7 +42,7 @@ pub async fn index(
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
         let var_name = String::new();
-        let var_name = IndexTemplate::new("Home", vec![], &var_name, false);
+        let var_name = IndexTemplate::new("Home".to_string(), vec![], var_name, false);
 
         let rendered = var_name.render().expect("Failed to render template");
 
@@ -88,7 +88,8 @@ pub async fn index(
     match user.clone() {
         None => {
             tracing::warn!("User is not logged in: {user:#?}");
-            let var_name = IndexTemplate::new("Home", blog_post, "None", false);
+            let var_name =
+                IndexTemplate::new("Home".to_string(), blog_post, "None".to_string(), false);
 
             let rendered = var_name.render().expect("Failed to render template");
             HttpResponse::Ok().body(rendered)
@@ -105,9 +106,9 @@ pub async fn index(
                     ));
                 }
             }
-            .collection(&BlogPost::to_name());
+            .collection::<BlogPost>(&BlogPost::to_name());
 
-            let filter = mongodb::bson::doc! { "email": &email };
+            let filter = mongodb::bson::doc! { "user_id": &email };
             tracing::warn!("The email to check against: {email:#?}");
 
             // Each user can have more than one blog post, so we need to find all of them
@@ -137,7 +138,8 @@ pub async fn index(
                 }
             }
 
-            let var_name = IndexTemplate::new("Home", blog_post, &email, true);
+            let var_name =
+                IndexTemplate::new("Home".to_string(), blog_post, email.to_string(), true);
 
             let rendered = var_name.render().expect("Failed to render template");
 

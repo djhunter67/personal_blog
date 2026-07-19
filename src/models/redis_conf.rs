@@ -61,25 +61,40 @@ pub fn authenticated_user_id(
     let session_key = format!(
         "{}{}",
         crate::settings::get()
-            .map_err(|_| AuthenticationError::InvalidSession)?
+            .map_err(|_| AuthenticationError::Redis)?
             .redis
             .key,
         session_cookie.value()
     );
 
+    tracing::info!("Establishing the Redis connection");
     let mut redis_conn =
         establish_connection(redis_pool).map_err(|_| AuthenticationError::Redis)?;
 
-    let serialized_session: Option<String> = redis_conn
-        .get(session_key)
+    tracing::info!("Getting the user from the session");
+    let user_id: Option<String> = redis_conn
+        .get(&session_key)
         .map_err(|_| AuthenticationError::Redis)?;
 
-    let serialized_session = serialized_session.ok_or(AuthenticationError::InvalidSession)?;
+    tracing::info!("Checking that the serialized session is valid: {user_id:#?}");
+    let user_id: String = user_id.map_or_else(
+        || {
+            tracing::error!("No user data associated with the received session key: {session_key}");
+            String::new()
+        },
+        |email| {
+            tracing::warn!("User email found: {email}");
+            email
+        },
+    );
+    // .ok_or(AuthenticationError::InvalidSession)?;
 
-    let session: UserSession = serde_json::from_str(&serialized_session)
-        .map_err(|_| AuthenticationError::InvalidSession)?;
+    // tracing::info!("Converting the session to a json object: {user_id:#?}");
+    // let session: UserSession =
+    // serde_json::from_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)?;
 
-    ObjectId::parse_str(session.user_id).map_err(|_| AuthenticationError::InvalidSession)
+    tracing::warn!("Passing back the ObjectId from the session: {user_id:#?}");
+    ObjectId::parse_str(user_id).map_err(|_| AuthenticationError::InvalidSession)
 }
 
 #[cfg(test)]

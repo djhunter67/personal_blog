@@ -4,7 +4,7 @@ use actix_web::{
 };
 use askama::Template;
 use futures::TryStreamExt;
-use mongodb::bson::doc;
+use mongodb::bson::{doc, oid::ObjectId};
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
@@ -14,7 +14,7 @@ use crate::{
         mongo::{self},
         redis_conf,
     },
-    security::{login::LoginChecker, passworder::PassWorder},
+    security::passworder::PassWorder,
     settings,
 };
 
@@ -25,7 +25,7 @@ use crate::{
 struct RegisterTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
-    user: &'a str,
+    user_id: &'a str,
     is_logged_in: bool,
 }
 
@@ -44,6 +44,7 @@ struct RegistrationData {
     email: String,
     password_hash: String,
     password_salt: String,
+    user_id: Option<ObjectId>,
 }
 
 #[get("/register")]
@@ -59,7 +60,7 @@ pub async fn register_template() -> HttpResponse {
     let template = RegisterTemplate {
         title: "Registration",
         content: [user_name, user_password_1, user_password_2].to_vec(),
-        user: "logged in user",
+        user_id: "logged in user",
         is_logged_in: false,
     };
 
@@ -146,23 +147,27 @@ pub async fn register_user(
     let (salt, pw, _) = encrypted_pw.deconstruct();
 
     // Save the user to the database
-    let result = db
+    let result_oid = db
         .insert_one(&RegistrationData {
             email: email.clone(),
             password_hash: pw,
             password_salt: salt,
+            user_id: None,
         })
         .await;
 
-    match result {
-        Ok(id) => {
+    match result_oid {
+        Ok(oid) => {
             tracing::info!("Database save successful");
-            tracing::info!("Saving to the cache-layer");
-            let cache_key = format!("user:auth:{}", body.0.email);
 
-            let auth_data = LoginChecker::new(email, encrypted_pw.get());
+            let cache_key = format!("user:auth:{email}");
+            tracing::info!("Saving the cache-key to the cache-layer: {cache_key}");
 
-            if let Ok(json_data) = serde_json::to_string(&auth_data) {
+            // let auth_data = LoginChecker::new(email, encrypted_pw.get());
+
+            if let Ok(json_data) =
+                serde_json::to_string(&oid.inserted_id.as_object_id().expect("Oid not generated"))
+            {
                 let mut redis_conn = match redis_conf::establish_connection(&redis) {
                     Ok(conn) => conn,
                     Err(err) => {
@@ -172,7 +177,7 @@ pub async fn register_user(
                     }
                 };
                 // Debug log
-                // tracing::info!("the json data to be saved: {:#?}", json_data);
+                tracing::warn!("the json data to be saved: {cache_key}{:#?}", json_data);
                 // Set the key in Redis
                 // let _: redis::RedisResult<()> = redis_conn.set_ex(&cache_key, json_data, 3600);
                 match redis_conn.set_ex(&cache_key, json_data, 3600) {
@@ -181,7 +186,10 @@ pub async fn register_user(
                 }
             }
 
-            HttpResponse::Created().json(format!("User Registered: {}", id.inserted_id))
+            HttpResponse::Created().json(format!(
+                "User Registered, ID: {}",
+                oid.inserted_id.as_object_id().expect("Will be a value")
+            ))
         }
         Err(err) => HttpResponse::InternalServerError().json(err.to_string()),
     }

@@ -38,12 +38,26 @@ pub struct JournalDraft {
     #[serde(rename = "_id")]
     pub id: ObjectId,
     pub user_id: ObjectId,
+    pub state: DraftState,
     pub title: String,
     pub body: String,
     pub author: String,
     pub created_at: BsonDateTime,
     pub updated_at: BsonDateTime,
     pub revision: i64,
+}
+
+impl JournalDraft {
+    pub fn to_name() -> String {
+        String::from("journal_drafts")
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DraftState {
+    Active,
+    Published,
 }
 
 /// # Errors

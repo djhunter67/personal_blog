@@ -1,7 +1,7 @@
 use config::{Config, File};
 use serde::Deserialize;
 use std::env;
-use tracing::{error, info, instrument};
+use tracing::instrument;
 
 /// Global setting for exposing all preconfigured variables
 #[derive(Deserialize, Clone)]
@@ -141,11 +141,11 @@ pub fn get() -> Result<Settings, config::ConfigError> {
         .build()
     {
         Ok(settings) => {
-            info!("Successfully loaded the settings");
+            tracing::debug!("Successfully loaded the settings");
             settings
         }
         Err(err) => {
-            error!("Failed to load the settings");
+            tracing::error!("Failed to load the settings");
             return Err(err);
         }
     };

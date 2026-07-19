@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 use crate::{
-    endpoints::register::RegisterUser,
     models::{mongo, redis_conf},
     security::{login::LoginChecker, passworder::PassWorder, session::create_session},
     settings,
@@ -21,7 +20,7 @@ use crate::{
 pub struct LoginTemplate<'a> {
     pub title: &'a str,
     pub content: Vec<&'a str>,
-    pub user: &'a str,
+    pub user_id: &'a str,
     pub is_logged_in: bool,
 }
 
@@ -43,15 +42,6 @@ pub struct LoginUser {
     pub password: String,
 }
 
-impl From<RegisterUser> for LoginUser {
-    fn from(value: RegisterUser) -> Self {
-        Self {
-            email: value.email,
-            password: value.password,
-        }
-    }
-}
-
 #[get("/login")]
 #[instrument(
     name = "User login attempted",
@@ -66,7 +56,7 @@ pub async fn login_template() -> HttpResponse {
     let template = LoginTemplate {
         title: "Login",
         content: [user_login, user_password].to_vec(),
-        user: "logged in user",
+        user_id: "logged in user",
         is_logged_in: false,
     };
 
@@ -118,13 +108,25 @@ pub async fn login_user(
     };
 
     let user_auth: LoginChecker = if let Some(json_data) = cached_user {
-        tracing::warn!("cache-hit");
+        // redundant Option to satisfy the compiler
+        tracing::warn!("cache-hit: {json_data:#?}");
 
-        let mut json_result: LoginChecker = serde_json::from_str::<LoginChecker>(&json_data)
-            .expect("Unable to convert json data to LoginChecker");
+        let mut json_result = LoginChecker::new(useremail.to_string(), password.to_string());
+
+        // let mut json_result: LoginChecker = match serde_json::from_str::<LoginChecker>(&json_data) {
+        //     Ok(json_result) => json_result,
+        //     Err(err) => {
+        //         tracing::error!("Unable to convert json data to LoginChecker: {err:#?}");
+        //         LoginChecker::default()
+        //     }
+        // };
+        // .expect("Unable to convert json data to LoginChecker");
 
         // Deconstruct the entire pw hash into the salt and pw
-        let pw_hash: PassWorder = PassWorder::new(json_result.get_pw());
+        let pw_hash: PassWorder = PassWorder::new(json_result.get_pw())
+            .encrypt()
+            .salt()
+            .pepper();
 
         let (_salt, pw, _pepper) = pw_hash.deconstruct();
 

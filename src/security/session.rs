@@ -42,7 +42,7 @@ pub async fn create_session(
     let template = LoginTemplate {
         title: "Login",
         content: ["some_email@email", "some_password"].to_vec(),
-        user: &user.get_email(),
+        user_id: &user.get_email(),
         is_logged_in: true,
     };
 

@@ -5,6 +5,7 @@ use crate::security::passworder::PassWorder;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct LoginChecker {
+    #[serde(rename = "email_input")]
     email: String,
     password_hash: String,
 }
