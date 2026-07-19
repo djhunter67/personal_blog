@@ -5,7 +5,7 @@ use std::{env, fs};
 /// and push hooks to change the secret being injected here.
 const MONGO_LOCATION: &str =
     "10.20.20.205:27017/?authMechanism=SCRAM-SHA-256&directConnection=true&replicaSet=rs0";
-const REDIS_LOCATION: &str = "10.20.20.202:6379";
+const REDIS_LOCATION: &str = "10.20.20.36:6379";
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let dest_path = String::from("./settings/base.yaml");

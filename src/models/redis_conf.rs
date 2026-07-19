@@ -58,26 +58,26 @@ pub fn authenticated_user_id(
         .cookie("session_id")
         .ok_or(AuthenticationError::MissingSession)?;
 
-    let session_key = format!(
-        "{}{}",
-        crate::settings::get()
-            .map_err(|_| AuthenticationError::Redis)?
-            .redis
-            .key,
-        session_cookie.value()
-    );
+    let session_key = format!("session:{}", session_cookie.value());
 
     tracing::info!("Establishing the Redis connection");
     let mut redis_conn =
         establish_connection(redis_pool).map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Getting the user from the session");
-    let user_id: Option<String> = redis_conn
+    let user_email: Option<String> = redis_conn
         .get(&session_key)
         .map_err(|_| AuthenticationError::Redis)?;
 
+    tracing::warn!("Checking that the email to check against is valid: {user_email:#?}");
+
+    let user_id_key = format!("user:auth:{}", user_email.unwrap_or_default());
+    let user_id: Option<String> = redis_conn
+        .get(&user_id_key)
+        .map_err(|_| AuthenticationError::Redis)?;
+
     tracing::info!("Checking that the serialized session is valid: {user_id:#?}");
-    let user_id: String = user_id.map_or_else(
+    let user_id = user_id.map_or_else(
         || {
             tracing::error!("No user data associated with the received session key: {session_key}");
             String::new()

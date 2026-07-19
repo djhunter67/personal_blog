@@ -177,10 +177,11 @@ pub async fn register_user(
                     }
                 };
                 // Debug log
-                tracing::warn!("the json data to be saved: {cache_key}{:#?}", json_data);
+                tracing::warn!("the json data to be saved: {cache_key}{json_data}");
                 // Set the key in Redis
                 // let _: redis::RedisResult<()> = redis_conn.set_ex(&cache_key, json_data, 3600);
-                match redis_conn.set_ex(&cache_key, json_data, 3600) {
+                match redis_conn.set_ex(&cache_key, json_data, 6400) {
+                    // change to 3200 for production
                     Ok(()) => (),
                     Err(err) => tracing::error!("Error saving to the cache layer -> {err:#?}"),
                 }

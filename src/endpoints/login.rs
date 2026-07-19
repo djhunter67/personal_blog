@@ -88,7 +88,7 @@ pub async fn login_user(
     };
 
     // Check redis first
-    tracing::info!("Checking the cache-layer");
+    tracing::info!("Checking the cache-layer for: {useremail}");
     let cache_key = format!("user:auth:{useremail}");
     let mut redis_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
@@ -106,6 +106,8 @@ pub async fn login_user(
             None
         }
     };
+
+    tracing::warn!("The cached information to check against: {cached_user:#?}");
 
     let user_auth: LoginChecker = if let Some(json_data) = cached_user {
         // redundant Option to satisfy the compiler
@@ -158,6 +160,8 @@ pub async fn login_user(
             .collection,
         );
 
+        tracing::info!("Checking the cache-missed info against the db: {filter}");
+
         match db.find_one(filter).await {
             Ok(user) => {
                 if let Some(user_found) = user {
@@ -165,7 +169,7 @@ pub async fn login_user(
                 } else {
                     tracing::error!("No user data found in the database");
                     // Change this to unauthorized
-                    return HttpResponse::Ok().body("No user data matching the supplied email");
+                    return HttpResponse::Ok().json("No user data matching the supplied email");
                 }
             }
             Err(err) => {

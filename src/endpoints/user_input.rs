@@ -387,11 +387,11 @@ pub fn validate_user(
 #[post("/draft/autosave")]
 pub async fn autosave_journal_draft(
     req: HttpRequest,
-    mongo: Data<mongodb::Client>,
-    redis: Data<r2d2::Pool<redis::Client>>,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
     Form(input): Form<JournalDraftInput>,
 ) -> HttpResponse {
-    let user_id = match authenticated_user_id(&req, &redis) {
+    let user_id = match authenticated_user_id(&req, &redis_client) {
         Ok(user_id) => user_id,
         Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
             return HttpResponse::Unauthorized()
@@ -424,7 +424,7 @@ pub async fn autosave_journal_draft(
         return HttpResponse::Ok().body("Begin typing to create a draft");
     }
 
-    let drafts = mongo::establish_connection(&mongo)
+    let drafts = mongo::establish_connection(&mongo_client)
         .await
         .expect("mongo error")
         .collection::<JournalDraft>("journal_drafts");
