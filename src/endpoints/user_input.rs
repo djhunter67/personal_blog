@@ -1,20 +1,20 @@
 use std::fmt::Display;
 
 use actix_web::{
-    HttpRequest, HttpResponse, delete, post,
+    HttpRequest, HttpResponse, post,
     web::{self, Data, Form},
 };
 use askama::Template;
 use chrono::DateTime;
-use mongodb::bson::{self, doc};
+use mongodb::bson::doc;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::{DraftStatusTemplate, JournalFormTemplate},
+    endpoints::templates::JournalFormTemplate,
     models::{
         mongo::{self, JournalDraft},
-        redis_conf::{self, AuthenticationError, authenticated_user_id},
+        redis_conf::{self, authenticated_user_id},
     },
     settings,
 };
@@ -137,6 +137,7 @@ pub struct JournalDraftInput {
 }
 
 impl JournalDraftInput {
+    #[must_use]
     pub const fn new(
         draft_id: Option<String>,
         title: String,
@@ -226,8 +227,8 @@ pub async fn submit_text(
 ) -> HttpResponse {
     tracing::info!("Submit text endpoint");
 
-    let user_id = match authenticated_user_id(&req, &redis_client) {
-        Ok(user_id) => user_id,
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(user_oid) => user_oid,
         Err(err) => {
             tracing::error!(?err, "Unable to authenticate the user");
             return HttpResponse::Unauthorized().finish();
@@ -261,42 +262,37 @@ pub async fn submit_text(
     .collection::<JournalDraft>("journal_entries");
 
     let new_entry = BlogPost::new(
-        user_id.to_string(),
         title.to_owned(),
         body.to_owned(),
         author.to_owned(),
+        user_oid.to_string(),
         true,
     );
+    tracing::warn!("Created BlogPost instance: {new_entry:#?}");
 
-    match journal_entries.insert_one(new_entry).await {
+    match journal_entries.insert_one(&new_entry).await {
         Ok(_) => {
             tracing::info!("Inserting a new journal entry");
             if let Err(err) = drafts
                 .delete_one(doc! {
-                "user_id": user_id
+                "_id": user_oid
                 })
                 .await
             {
                 tracing::error!(
                     ?err,
-                    %user_id,
+                    %user_oid,
                     "Entry published but draft cleanup failed"
                 );
             }
-            let blog_template = JournalFormTemplate::new(
-                mongodb::bson::oid::ObjectId::new().to_string(),
-                title,
-                body,
-                // author,
-                "Hunter, Christerpher",
-            );
+            let blog_template = JournalFormTemplate::new(vec![new_entry]);
 
             let render = match blog_template.render() {
                 Ok(html) => html,
                 Err(err) => {
                     tracing::error!(
                     ?err,
-                    %user_id,
+                    %user_oid,
                     "Entry published but rendering failed"
                     );
                     return HttpResponse::InternalServerError().body(
@@ -310,7 +306,7 @@ pub async fn submit_text(
         Err(err) => {
             tracing::error!(
             ?err,
-            %user_id,
+            %user_oid,
             "Unable to publish journal entry"
             );
 
@@ -339,7 +335,7 @@ pub fn validate_user(
         )));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(&redis) {
+    let mut red_conn = match redis_conf::establish_connection(redis) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
@@ -383,127 +379,127 @@ pub fn validate_user(
     }
 }
 
-#[allow(clippy::future_not_send)]
-#[post("/draft/autosave")]
-pub async fn autosave_journal_draft(
-    req: HttpRequest,
-    mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
-    Form(input): Form<JournalDraftInput>,
-) -> HttpResponse {
-    let user_id = match authenticated_user_id(&req, &redis_client) {
-        Ok(user_id) => user_id,
-        Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
-            return HttpResponse::Unauthorized()
-                .body("Your session expired. The draft was not saved");
-        }
-        Err(AuthenticationError::Redis) => {
-            tracing::error!("Unable to access Redis during draft autosave");
+// #[allow(clippy::future_not_send)]
+// #[post("/draft/autosave")]
+// pub async fn autosave_journal_draft(
+//     req: HttpRequest,
+//     mongo_client: Data<mongodb::Client>,
+//     redis_client: Data<r2d2::Pool<redis::Client>>,
+//     Form(input): Form<JournalDraftInput>,
+// ) -> HttpResponse {
+//     let user_id = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+//         Ok(user_id) => user_id,
+//         Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
+//             return HttpResponse::Unauthorized()
+//                 .body("Your session expired. The draft was not saved");
+//         }
+//         Err(AuthenticationError::Redis) => {
+//             tracing::error!("Unable to access Redis during draft autosave");
 
-            return HttpResponse::ServiceUnavailable()
-                .body("Draft autosave is temporarily unavailable");
-        }
-    };
+//             return HttpResponse::ServiceUnavailable()
+//                 .body("Draft autosave is temporarily unavailable");
+//         }
+//     };
 
-    let title = input.title.trim();
-    let author = input.author.trim();
+//     let title = input.title.trim();
+//     let author = input.author.trim();
 
-    if title.chars().count() > 300 {
-        return HttpResponse::BadRequest().body("Draft was not saved: title is too long");
-    }
-    if input.body.chars().count() > 1_000_000 {
-        return HttpResponse::BadRequest().body("Draft was not saved: journal entry is too long");
-    }
+//     if title.chars().count() > 300 {
+//         return HttpResponse::BadRequest().body("Draft was not saved: title is too long");
+//     }
+//     if input.body.chars().count() > 1_000_000 {
+//         return HttpResponse::BadRequest().body("Draft was not saved: journal entry is too long");
+//     }
 
-    if author.chars().count() > 200 {
-        return HttpResponse::BadRequest().body("Draft was not saved: author name is too long");
-    }
+//     if author.chars().count() > 200 {
+//         return HttpResponse::BadRequest().body("Draft was not saved: author name is too long");
+//     }
 
-    // Check if the meaningful fields have been filled in
-    if title.is_empty() && input.body.trim().is_empty() {
-        return HttpResponse::Ok().body("Begin typing to create a draft");
-    }
+//     // Check if the meaningful fields have been filled in
+//     if title.is_empty() && input.body.trim().is_empty() {
+//         return HttpResponse::Ok().body("Begin typing to create a draft");
+//     }
 
-    let drafts = mongo::establish_connection(&mongo_client)
-        .await
-        .expect("mongo error")
-        .collection::<JournalDraft>("journal_drafts");
+//     let drafts = mongo::establish_connection(&mongo_client)
+//         .await
+//         .expect("mongo error")
+//         .collection::<JournalDraft>("journal_drafts");
 
-    let now = bson::DateTime::now();
+//     let now = bson::DateTime::now();
 
-    let draft_id =
-        match bson::oid::ObjectId::parse_str(input.draft_id.as_ref().unwrap_or(&"".to_string())) {
-            Ok(draft_id) => draft_id,
-            Err(err) => {
-                tracing::error!(
-                    ?err,
-                    "Unable to parse the draft_id: {}",
-                    input.draft_id.as_ref().unwrap_or(&"".to_string())
-                );
-                return HttpResponse::BadRequest().body("Draft was not saved: invalid draft_id");
-            }
-        };
+//     let draft_id =
+//         match bson::oid::ObjectId::parse_str(input.draft_id.as_ref().unwrap_or(&"".to_string())) {
+//             Ok(draft_id) => draft_id,
+//             Err(err) => {
+//                 tracing::error!(
+//                     ?err,
+//                     "Unable to parse the draft_id: {}",
+//                     input.draft_id.as_ref().unwrap_or(&"".to_string())
+//                 );
+//                 return HttpResponse::BadRequest().body("Draft was not saved: invalid draft_id");
+//             }
+//         };
 
-    let filter = doc! {
-    "_id": draft_id,
-    "user_id": user_id,
-    "state": "active"
-    };
+//     let filter = doc! {
+//     "_id": draft_id,
+//     "user_id": user_id,
+//     "state": "active"
+//     };
 
-    let update = doc! {
-    "$set": {
-        "title": title,
-        "body": &input.body,
-        "author": author,
-        "updated_at": now,
-    },
-    "$setOnInsert": {
-        "_id": mongodb::bson::oid::ObjectId::new(),
-        "user_id": user_id,
-        "created_at": now,
-    },
-    "$inc": {
-        "revision": 1_i64
-    },
-    };
+//     let update = doc! {
+//     "$set": {
+//         "title": title,
+//         "body": &input.body,
+//         "author": author,
+//         "updated_at": now,
+//     },
+//     "$setOnInsert": {
+//         "_id": mongodb::bson::oid::ObjectId::new(),
+//         "user_id": user_id,
+//         "created_at": now,
+//     },
+//     "$inc": {
+//         "revision": 1_i64
+//     },
+//     };
 
-    let update_result = drafts.update_one(filter, update).upsert(true).await;
+//     let update_result = drafts.update_one(filter, update).upsert(true).await;
 
-    match update_result {
-        Ok(_) => {
-            tracing::warn!("DB update successful for user_id: {user_id}");
-            let displayed_time = chrono::Utc::now().format("%Y-%m-%d %H:%S UTC");
+//     match update_result {
+//         Ok(_) => {
+//             tracing::warn!("DB update successful for user_id: {user_id}");
+//             let displayed_time = chrono::Utc::now().format("%Y-%m-%d %H:%S UTC");
 
-            let message = format!("Draft saved at {displayed_time}.");
+//             let message = format!("Draft saved at {displayed_time}.");
 
-            let response = DraftStatusTemplate {
-                status_class: "saved",
-                message: &message,
-            };
+//             let response = DraftStatusTemplate {
+//                 status_class: "saved",
+//                 message: &message,
+//             };
 
-            match response.render() {
-                Ok(rend) => HttpResponse::Ok()
-                    .content_type("text/html; charset=utf-8")
-                    .body(rend),
+//             match response.render() {
+//                 Ok(rend) => HttpResponse::Ok()
+//                     .content_type("text/html; charset=utf-8")
+//                     .body(rend),
 
-                Err(err) => {
-                    tracing::error!("Unable to render draft status: {err}");
-                    HttpResponse::InternalServerError().finish()
-                }
-            }
-        }
-        Err(err) => {
-            tracing::error!(
-            ?err,
-            %user_id,
-            "Unable to autosave journal draft"
-            );
+//                 Err(err) => {
+//                     tracing::error!("Unable to render draft status: {err}");
+//                     HttpResponse::InternalServerError().finish()
+//                 }
+//             }
+//         }
+//         Err(err) => {
+//             tracing::error!(
+//             ?err,
+//             %user_id,
+//             "Unable to autosave journal draft"
+//             );
 
-            HttpResponse::InternalServerError()
-                .body("The draft could not be saved. Continue typing and try again")
-        }
-    }
-}
+//             HttpResponse::InternalServerError()
+//                 .body("The draft could not be saved. Continue typing and try again")
+//         }
+//     }
+// }
 
 /// # Errors
 ///
@@ -523,62 +519,56 @@ pub async fn find_active_draft(
         .await
 }
 
-#[allow(clippy::future_not_send)]
-#[delete("draft/current")]
-pub async fn discard_current_draft(
-    req: HttpRequest,
-    mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
-) -> HttpResponse {
-    let user_id = match authenticated_user_id(&req, &redis_client) {
-        Ok(user_id) => user_id,
-        Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
-            return HttpResponse::Unauthorized().body("Your session has expired");
-        }
-        Err(AuthenticationError::Redis) => {
-            tracing::error!("The cache-layer could not be established");
-            return HttpResponse::ServiceUnavailable()
-                .body(format!("The draft could not be discarded",));
-        }
-    };
+// #[allow(clippy::future_not_send)]
+// #[delete("draft/current")]
+// pub async fn discard_current_draft(
+//     req: HttpRequest,
+//     mongo_client: Data<mongodb::Client>,
+//     redis_client: Data<r2d2::Pool<redis::Client>>,
+// ) -> HttpResponse {
+//     let user_id = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+//         Ok(user_id) => user_id,
+//         Err(AuthenticationError::MissingSession | AuthenticationError::InvalidSession) => {
+//             return HttpResponse::Unauthorized().body("Your session has expired");
+//         }
+//         Err(AuthenticationError::Redis) => {
+//             tracing::error!("The cache-layer could not be established");
+//             return HttpResponse::ServiceUnavailable()
+//                 .json("The draft could not be discarded".to_string());
+//         }
+//     };
 
-    let drafts = match mongo::establish_connection(&mongo_client).await {
-        Ok(db) => db,
-        Err(err) => {
-            tracing::error!("Unable to procure the database: {err}");
-            return HttpResponse::InternalServerError().body("Failed to procure the db: {err}");
-        }
-    }
-    .collection::<JournalDraft>("journal_drafts");
+//     let drafts = match mongo::establish_connection(&mongo_client).await {
+//         Ok(db) => db,
+//         Err(err) => {
+//             tracing::error!("Unable to procure the database: {err}");
+//             return HttpResponse::InternalServerError().body("Failed to procure the db: {err}");
+//         }
+//     }
+//     .collection::<JournalDraft>("journal_drafts");
 
-    match drafts
-        .delete_one(doc! {
-            "user_id": user_id,
-        })
-        .await
-    {
-        Ok(_) => {
-            tracing::info!("Successfully deleted an entry");
-            let empty_form = JournalFormTemplate {
-                draft_id: String::new(),
-                draft_title: "",
-                draft_body: "",
-                draft_author: "",
-                draft_saved_at: None,
-            };
-            match empty_form.render() {
-                Ok(html) => HttpResponse::Ok()
-                    .content_type("text/html; charset=utf-8")
-                    .body(html),
-                Err(err) => {
-                    tracing::error!(?err, %user_id, "Unable to save journal draft");
-                    HttpResponse::InternalServerError().finish()
-                }
-            }
-        }
-        Err(err) => {
-            tracing::error!(?err, "Unable to render empty journal form");
-            HttpResponse::InternalServerError().body("The draft could not be discarded")
-        }
-    }
-}
+//     match drafts
+//         .delete_one(doc! {
+//             "user_id": user_id,
+//         })
+//         .await
+//     {
+//         Ok(_) => {
+//             tracing::info!("Successfully deleted an entry");
+//             let empty_form = JournalFormTemplate::new(vec![BlogPost::default()]);
+//             match empty_form.render() {
+//                 Ok(html) => HttpResponse::Ok()
+//                     .content_type("text/html; charset=utf-8")
+//                     .body(html),
+//                 Err(err) => {
+//                     tracing::error!(?err, %user_id, "Unable to save journal draft");
+//                     HttpResponse::InternalServerError().finish()
+//                 }
+//             }
+//         }
+//         Err(err) => {
+//             tracing::error!(?err, "Unable to render empty journal form");
+//             HttpResponse::InternalServerError().body("The draft could not be discarded")
+//         }
+//     }
+// }

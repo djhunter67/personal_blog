@@ -9,8 +9,8 @@ use tracing::instrument;
 #[template(path = "settings.html")]
 struct SettingsTemplate<'a> {
     title: &'a str,
-    user_id: &'a str,
     is_logged_in: bool,
+    user_email: &'a str,
 }
 
 #[derive(Debug, MultipartForm)]
@@ -36,10 +36,11 @@ pub struct UserSettingsChange {
 pub async fn settings_template() -> HttpResponse {
     tracing::info!("Login page loaded");
 
+    // Authenticate this endpoint
     let template = SettingsTemplate {
         title: "Settings",
-        user_id: "logged in user",
         is_logged_in: true,
+        user_email: "placeholder@email.com",
     };
 
     let template = template.render().expect("Login page render error");

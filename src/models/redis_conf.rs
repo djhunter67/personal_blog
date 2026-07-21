@@ -8,6 +8,8 @@ use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
+use crate::models::mongo;
+
 #[instrument(
     name = "Establishing a connection to the Redis database",
     level = "info",
@@ -50,43 +52,69 @@ pub enum AuthenticationError {
 /// - `AuthenticationError::MissingSession` if the session cookie is missing
 /// - `AuthenticationError::InvalidSession` if the session is invalid
 /// - `AuthenticationError::Redis` if there is an error connecting to Redis
-pub fn authenticated_user_id(
+pub async fn authenticated_user_id(
     req: &HttpRequest,
-    redis_pool: &Data<r2d2::Pool<redis::Client>>,
+    mongo_client: &Data<mongodb::Client>,
+    redis_client: &Data<r2d2::Pool<redis::Client>>,
 ) -> Result<ObjectId, AuthenticationError> {
     let session_cookie = req
         .cookie("session_id")
         .ok_or(AuthenticationError::MissingSession)?;
 
-    let session_key = format!("session:{}", session_cookie.value());
+    let user_session = format!("session:{}", session_cookie.value());
 
     tracing::info!("Establishing the Redis connection");
     let mut redis_conn =
-        establish_connection(redis_pool).map_err(|_| AuthenticationError::Redis)?;
+        establish_connection(redis_client).map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Getting the user from the session");
     let user_email: Option<String> = redis_conn
-        .get(&session_key)
+        .get(&user_session)
         .map_err(|_| AuthenticationError::Redis)?;
 
     tracing::warn!("Checking that the email to check against is valid: {user_email:#?}");
 
-    let user_id_key = format!("user:auth:{}", user_email.unwrap_or_default());
+    let user_id_key = format!("auth:user:{}", user_email.clone().unwrap_or_default());
     let user_id: Option<String> = redis_conn
         .get(&user_id_key)
         .map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Checking that the serialized session is valid: {user_id:#?}");
-    let user_id = user_id.map_or_else(
-        || {
-            tracing::error!("No user data associated with the received session key: {session_key}");
-            String::new()
-        },
-        |email| {
-            tracing::warn!("User email found: {email}");
-            email
-        },
-    );
+    // I need an email for the user to be able to get the oid from Mongo
+    let user_id = match user_id {
+        None => {
+            tracing::error!("Cache-Miss: {user_session}");
+            let mongo_client = mongo::establish_connection(mongo_client)
+                .await
+                .map_err(|_| AuthenticationError::InvalidSession)?;
+
+            let filter = mongodb::bson::doc! { "email": user_email.clone().unwrap_or_default() };
+            let user_doc = mongo_client
+                .collection::<mongodb::bson::Document>("development")
+                .find_one(filter)
+                .await
+                .map_err(|_| AuthenticationError::InvalidSession)?;
+
+            tracing::info!("Checking that the db user data is valid: {user_doc:?}");
+
+            if let Some(user_doc) = user_doc {
+                if let Ok(user_id) = user_doc.get_object_id("_id") {
+                    tracing::warn!("User ID found in MongoDB: {user_id}");
+                    return Ok(user_id);
+                }
+            }
+
+            tracing::error!(
+                "No user data associated with the received session key: {user_session}"
+            );
+            Err(AuthenticationError::InvalidSession)?
+        }
+        Some(user_bson_oid) => {
+            tracing::warn!("Cache-Hit: {user_bson_oid}");
+            user_bson_oid
+        }
+    };
+
     // .ok_or(AuthenticationError::InvalidSession)?;
 
     // tracing::info!("Converting the session to a json object: {user_id:#?}");
@@ -94,7 +122,7 @@ pub fn authenticated_user_id(
     // serde_json::from_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)?;
 
     tracing::warn!("Passing back the ObjectId from the session: {user_id:#?}");
-    ObjectId::parse_str(user_id).map_err(|_| AuthenticationError::InvalidSession)
+    ObjectId::parse_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)
 }
 
 #[cfg(test)]

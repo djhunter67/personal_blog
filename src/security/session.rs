@@ -42,8 +42,8 @@ pub async fn create_session(
     let template = LoginTemplate {
         title: "Login",
         content: ["some_email@email", "some_password"].to_vec(),
-        user_id: &user.get_email(),
         is_logged_in: true,
+        user_email: &user.get_email(),
     };
 
     let render = template.render().expect("unable to render web page");

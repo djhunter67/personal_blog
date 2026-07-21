@@ -20,8 +20,8 @@ use crate::{
 pub struct LoginTemplate<'a> {
     pub title: &'a str,
     pub content: Vec<&'a str>,
-    pub user_id: &'a str,
     pub is_logged_in: bool,
+    pub user_email: &'a str,
 }
 
 /// # TODO:
@@ -56,8 +56,8 @@ pub async fn login_template() -> HttpResponse {
     let template = LoginTemplate {
         title: "Login",
         content: [user_login, user_password].to_vec(),
-        user_id: "logged in user",
         is_logged_in: false,
+        user_email: user_login,
     };
 
     let template = template.render().expect("Login page render error");
@@ -102,7 +102,7 @@ pub async fn login_user(
     let cached_user: Option<String> = match redis_conn.get(cache_key) {
         Ok(cached_user) => Some(cached_user),
         Err(err) => {
-            tracing::debug!("cache-miss: {err}");
+            tracing::warn!("cache-miss: {err}");
             None
         }
     };

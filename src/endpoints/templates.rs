@@ -4,8 +4,6 @@ use askama::Template;
 use std::path::PathBuf;
 use tracing::{error, info, instrument};
 
-use crate::models::mongo::JournalDraft;
-
 use super::user_input::BlogPost;
 
 /// # TODO
@@ -15,132 +13,104 @@ use super::user_input::BlogPost;
 #[template(path = "index.html")]
 pub struct IndexTemplate {
     pub title: String,
+
     pub content: Vec<BlogPost>,
     pub version: String,
-    pub user_id: String,
+    pub user_email: String,
     pub is_logged_in: bool,
-
-    pub draft_id: String,
-    pub draft_title: String,
-    pub draft_body: String,
-    pub draft_author: String,
-    pub draft_saved_at: Option<String>,
 }
 
 impl IndexTemplate {
     /// Creates a new [`IndexTemplate`].
     #[must_use]
-    pub fn new(title: String, content: Vec<BlogPost>, user_id: String, is_logged_in: bool) -> Self {
+    pub fn new(
+        title: String,
+        content: Vec<BlogPost>,
+        user_email: String,
+        is_logged_in: bool,
+    ) -> Self {
         Self {
             title,
             content,
             version: env!("CARGO_PKG_VERSION").to_string(),
-            user_id,
+            user_email,
             is_logged_in,
-            draft_id: String::new(),
-            draft_title: String::new(),
-            draft_body: String::new(),
-            draft_author: String::new(),
-            draft_saved_at: None,
         }
     }
 
-    /// # Panics
-    ///
-    /// - Pannics if the `draft` is `Some` and the `updated_at` field cannot be converted to a `chrono::DateTime`.
-    #[must_use]
-    pub fn with_draft(
-        title: String,
-        content: Vec<BlogPost>,
-        user_id: String,
-        is_logged_in: bool,
-        draft: Option<JournalDraft>,
-    ) -> Self {
-        let (draft_id, draft_title, draft_body, draft_author, draft_saved_at) = match draft {
-            Some(draft) => {
-                let saved_at: Result<String, ()> = Ok(chrono::DateTime::<chrono::Utc>::from(
-                    draft.updated_at.to_system_time(),
-                ))
-                .map(|date| date.format("%B %-d, %Y at %-I:%M:%S %p UTC").to_string());
-                (
-                    draft.id.to_hex(),
-                    draft.title,
-                    draft.body,
-                    draft.author,
-                    saved_at.expect("Error with 'save_at' time"),
-                )
+    /*
+        /// # Panics
+        ///
+        /// - Pannics if the `draft` is `Some` and the `updated_at` field cannot be converted to a `chrono::DateTime`.
+        #[must_use]
+        pub fn with_draft(
+            title: String,
+            content: Vec<BlogPost>,
+            user_email: String,
+            is_logged_in: bool,
+            draft: Option<JournalDraft>,
+        ) -> Self {
+            let (draft_id, draft_title, draft_body, draft_author, draft_saved_at) = match draft {
+                Some(draft) => {
+                    let saved_at: Result<String, ()> = Ok(chrono::DateTime::<chrono::Utc>::from(
+                        draft.updated_at.to_system_time(),
+                    ))
+                    .map(|date| date.format("%B %-d, %Y at %-I:%M:%S %p UTC").to_string());
+                    (
+                        draft.id.to_hex(),
+                        draft.title,
+                        draft.body,
+                        draft.author,
+                        saved_at.expect("Error with 'save_at' time"),
+                    )
+                }
+
+                None => (
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    "Hunter, Christerper".to_owned(),
+                    String::new(),
+                ),
+            };
+
+            Self {
+                title,
+                version: "1".to_string(),
+                content,
+                user_email,
+                is_logged_in,
             }
-
-            None => (
-                String::new(),
-                String::new(),
-                String::new(),
-                "Hunter, Christerper".to_owned(),
-                String::new(),
-            ),
-        };
-
-        Self {
-            title,
-            version: "1".to_string(),
-            content,
-            user_id,
-            is_logged_in,
-            draft_id,
-            draft_title,
-            draft_body,
-            draft_author,
-            draft_saved_at: Some(draft_saved_at),
-        }
     }
+        */
 }
 
 #[derive(Template, Default)]
-#[template(path = "parts/journal_form.html")]
-pub struct JournalFormTemplate<'a> {
-    pub draft_id: String,
-    pub draft_title: &'a str,
-    pub draft_body: &'a str,
-    pub draft_author: &'a str,
-    pub draft_saved_at: Option<String>,
-}
-
-impl<'a> JournalFormTemplate<'a> {
-    #[must_use]
-    pub fn new(
-        draft_id: String,
-        draft_title: &'a str,
-        draft_body: &'a str,
-        draft_author: &'a str,
-    ) -> Self {
-        Self {
-            draft_id,
-            draft_title,
-            draft_body,
-            draft_author,
-            // the time is now
-            draft_saved_at: Some(
-                chrono::Utc::now()
-                    .format("%B %-d, %Y at %-I:%M:%S %p UTC")
-                    .to_string(),
-            ),
-        }
-    }
-}
-
-#[derive(Template)]
 #[template(path = "parts/posts.part.html")]
-pub struct PostPart {
+pub struct JournalFormTemplate {
     content: Vec<BlogPost>,
-    user: String,
 }
 
-impl PostPart {
+impl JournalFormTemplate {
     #[must_use]
-    pub const fn new(content: Vec<BlogPost>, user: String) -> Self {
-        Self { content, user }
+    pub const fn new(content: Vec<BlogPost>) -> Self {
+        Self { content }
     }
 }
+
+// #[derive(Template)]
+// #[template(path = "parts/posts.part.html")]
+// pub struct PostPart {
+//     content: Vec<BlogPost>,
+//     user: String,
+// }
+
+// impl PostPart {
+//     #[must_use]
+//     pub const fn new(content: Vec<BlogPost>, user: String) -> Self {
+//         Self { content, user }
+//     }
+// }
 
 #[derive(Template)]
 #[template(path = "parts/draft_status.part.html")]

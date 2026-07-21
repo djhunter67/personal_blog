@@ -2,7 +2,10 @@ use std::task::Poll;
 
 use crate::{
     endpoints::user_input::BlogPost,
-    models::{mongo, redis_conf},
+    models::{
+        mongo,
+        redis_conf::{self, authenticated_user_id},
+    },
     settings,
 };
 
@@ -17,6 +20,7 @@ use actix_web::{
 };
 use askama::Template;
 use futures::{StreamExt, stream};
+use mongodb::bson::oid::ObjectId;
 use tracing::{info, instrument};
 
 #[allow(clippy::future_not_send)]
@@ -25,18 +29,26 @@ use tracing::{info, instrument};
     level = "debug",
     target = "web_app_bloodhound",
     fields(samples = 25, title = "Home"),
-    skip(redis, req, mongo)
+    skip(redis_client, req, mongo_client)
 )]
 #[get("/")]
 pub async fn index(
     req: HttpRequest,
-    redis: Data<r2d2::Pool<redis::Client>>,
-    mongo: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+    mongo_client: Data<mongodb::Client>,
 ) -> HttpResponse {
     info!("Serving main page");
 
-    tracing::info!("About page loading");
+    let mut oid: ObjectId = ObjectId::new();
     let session_id = if let Some(cookie) = req.cookie("session_id") {
+        oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+            Ok(id) => id,
+            Err(err) => {
+                tracing::error!("Unable to validate the user: {err:#?}");
+                return HttpResponse::InternalServerError().json(format!("{err:#?}"));
+            }
+        };
+        tracing::info!("oid retrieved: {oid}");
         cookie.value().to_string()
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
@@ -51,7 +63,7 @@ pub async fn index(
             .body(rendered);
     };
 
-    let mut red_conn = match redis_conf::establish_connection(&redis) {
+    let mut red_conn = match redis_conf::establish_connection(&redis_client) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the redis connection: {err:#?}");
@@ -96,20 +108,20 @@ pub async fn index(
         }
         Some(email) => {
             // Get the previous blog posts from the database
-            let db: mongodb::Collection<BlogPost> = match mongo::establish_connection(&mongo).await
-            {
-                Ok(collection) => collection,
-                Err(err) => {
-                    tracing::error!("Error accessing the database: {err:#?}");
-                    return HttpResponse::InternalServerError().body(format!(
-                        "Unable to acquire the database connection: {err:#?}"
-                    ));
+            let db: mongodb::Collection<BlogPost> =
+                match mongo::establish_connection(&mongo_client).await {
+                    Ok(collection) => collection,
+                    Err(err) => {
+                        tracing::error!("Error accessing the database: {err:#?}");
+                        return HttpResponse::InternalServerError().body(format!(
+                            "Unable to acquire the database connection: {err:#?}"
+                        ));
+                    }
                 }
-            }
-            .collection::<BlogPost>(&BlogPost::to_name());
+                .collection::<BlogPost>(&BlogPost::to_name());
 
-            let filter = mongodb::bson::doc! { "user_id": &email };
-            tracing::warn!("The email to check against: {email:#?}");
+            let filter = mongodb::bson::doc! { "user_id": oid.to_string() };
+            tracing::warn!("The id to check against: {}", oid.to_string());
 
             // Each user can have more than one blog post, so we need to find all of them
             match db.find(filter).await {
@@ -128,6 +140,8 @@ pub async fn index(
                             }
                         }
                     }
+
+                    tracing::warn!("Found {} numder of posts", blog_post.len());
                 }
 
                 Err(err) => {

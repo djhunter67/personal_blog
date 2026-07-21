@@ -4,7 +4,7 @@ use actix_web::{
 };
 use askama::Template;
 use futures::TryStreamExt;
-use mongodb::bson::{doc, oid::ObjectId};
+use mongodb::bson::doc;
 use redis::Commands;
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
@@ -18,15 +18,15 @@ use crate::{
     settings,
 };
 
-/// All things login that need to be handled for the ``SundayLife`` services website.
+/// All things login that need to be handled for the ``Personal Blog`` services website.
 
 #[derive(Template)]
 #[template(path = "register.html")]
 struct RegisterTemplate<'a> {
     title: &'a str,
     content: Vec<&'a str>,
-    user_id: &'a str,
     is_logged_in: bool,
+    user_email: &'a str,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -44,7 +44,6 @@ struct RegistrationData {
     email: String,
     password_hash: String,
     password_salt: String,
-    user_id: Option<ObjectId>,
 }
 
 #[get("/register")]
@@ -60,8 +59,8 @@ pub async fn register_template() -> HttpResponse {
     let template = RegisterTemplate {
         title: "Registration",
         content: [user_name, user_password_1, user_password_2].to_vec(),
-        user_id: "logged in user",
         is_logged_in: false,
+        user_email: user_name,
     };
 
     let template = template.render().expect("About page render error");
@@ -152,7 +151,6 @@ pub async fn register_user(
             email: email.clone(),
             password_hash: pw,
             password_salt: salt,
-            user_id: None,
         })
         .await;
 
@@ -180,7 +178,7 @@ pub async fn register_user(
                 tracing::warn!("the json data to be saved: {cache_key}{json_data}");
                 // Set the key in Redis
                 // let _: redis::RedisResult<()> = redis_conn.set_ex(&cache_key, json_data, 3600);
-                match redis_conn.set_ex(&cache_key, json_data, 6400) {
+                match redis_conn.set(&cache_key, json_data) {
                     // change to 3200 for production
                     Ok(()) => (),
                     Err(err) => tracing::error!("Error saving to the cache layer -> {err:#?}"),
