@@ -252,14 +252,14 @@ pub async fn submit_text(
     }
     .collection::<BlogPost>("BlogPosts");
 
-    let drafts = match mongo::establish_connection(&mongo_client).await {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!(?err, "Unable to procure the db connection");
-            return HttpResponse::InternalServerError().finish();
-        }
-    }
-    .collection::<JournalDraft>("journal_entries");
+    // let drafts = match mongo::establish_connection(&mongo_client).await {
+    //     Ok(conn) => conn,
+    //     Err(err) => {
+    //         tracing::error!(?err, "Unable to procure the db connection");
+    //         return HttpResponse::InternalServerError().finish();
+    //     }
+    // }
+    // .collection::<JournalDraft>("journal_entries");
 
     let new_entry = BlogPost::new(
         title.to_owned(),
@@ -272,19 +272,19 @@ pub async fn submit_text(
 
     match journal_entries.insert_one(&new_entry).await {
         Ok(_) => {
-            tracing::info!("Inserting a new journal entry");
-            if let Err(err) = drafts
-                .delete_one(doc! {
-                "_id": user_oid
-                })
-                .await
-            {
-                tracing::error!(
-                    ?err,
-                    %user_oid,
-                    "Entry published but draft cleanup failed"
-                );
-            }
+            // tracing::info!("Inserting a new journal entry");
+            // if let Err(err) = drafts
+            //     .delete_one(doc! {
+            //     "_id": user_oid
+            //     })
+            //     .await
+            // {
+            //     tracing::error!(
+            //         ?err,
+            //         %user_oid,
+            //         "Entry published but draft cleanup failed"
+            //     );
+            // }
             let blog_template = JournalFormTemplate::new(vec![new_entry]);
 
             let render = match blog_template.render() {

@@ -20,7 +20,6 @@ use actix_web::{
 };
 use askama::Template;
 use futures::{StreamExt, stream};
-use mongodb::bson::oid::ObjectId;
 use tracing::{info, instrument};
 
 #[allow(clippy::future_not_send)]
@@ -39,16 +38,7 @@ pub async fn index(
 ) -> HttpResponse {
     info!("Serving main page");
 
-    let mut oid: ObjectId = ObjectId::new();
     let session_id = if let Some(cookie) = req.cookie("session_id") {
-        oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
-            Ok(id) => id,
-            Err(err) => {
-                tracing::error!("Unable to validate the user: {err:#?}");
-                return HttpResponse::InternalServerError().json(format!("{err:#?}"));
-            }
-        };
-        tracing::info!("oid retrieved: {oid}");
         cookie.value().to_string()
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
@@ -61,6 +51,14 @@ pub async fn index(
         return HttpResponse::Ok()
             .content_type(ContentType::html())
             .body(rendered);
+    };
+
+    let oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(id) => id,
+        Err(err) => {
+            tracing::error!("Unable to validate the user: {err:#?}");
+            return HttpResponse::InternalServerError().json(format!("{err:#?}"));
+        }
     };
 
     let mut red_conn = match redis_conf::establish_connection(&redis_client) {

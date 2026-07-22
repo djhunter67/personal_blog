@@ -45,6 +45,7 @@
 	    overflow-x: hidden;
 	    display: flex;
 	    flex-direction: column;
+	    height: max-content;
 	    // align-items: center;  // makes images smaller in regular screen size
 
 	    &__text {
@@ -54,6 +55,7 @@
 		    font-size: 1.2rem;
 		    color: #333;
 		    flex-grow: 1;
+		    text-indent: 5%;
 		}
 	    }
 
@@ -62,7 +64,15 @@
 		align-items: start;
 		justify-content: space-between;
 		// flex: 0 0 70%;
-		overflow-x: hidden;
+		overflow: hidden;
+		margin-bottom: 1rem;
+
+		img {
+		    width: 12%;
+		    height: auto;
+		    display: block;
+		    object-fit: cover;
+		}
 
 		h2 {
 		    margin-left: 4rem;
@@ -73,14 +83,13 @@
 		    justify-self: end;
 		    margin-left: 4rem;
 		    font-size: large;
+		    padding-right: 1rem;
 		}
+		// p {
+		//     padding-top: 1rem;
+		// }
 		
-		img {
-		    width: 12%;
-		    height: auto;
-		    display: block;
-		    object-fit: cover;
-		}
+		
 	    }
 	}	
     }

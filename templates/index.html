@@ -15,22 +15,9 @@
       <div id="any_error"></div>
     </div>
   </section>
-  <section id="main__info_cards">
-    {% for (i,card) in content.iter().enumerate() %}
-    <div class="card">
-      <div class="card__header">
-        <img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image">
-        <h2> Title: {{ card.get_title() }}  </h2>
-        <h3> Author: {{card.get_author()}} </h3>
-      </div>
-      <div class="card__text" id="card__{{i}}">
-        <p>
-          {{ card.get_body() }}
-        </p>
-      </div>
-    </div>
-    {% endfor %}
-    {% if is_logged_in %}
+  <section id="main__info_cards">    
+    {% if is_logged_in %}    
+    {% include "parts/posts.part.html" %}
     {% include "parts/journal_form.part.html" %}
     {% endif %}
   </section>
