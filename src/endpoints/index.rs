@@ -139,7 +139,7 @@ pub async fn index(
                         }
                     }
 
-                    tracing::warn!("Found {} numder of posts", blog_post.len());
+                    tracing::warn!("Found {} number of posts", blog_post.len());
                 }
 
                 Err(err) => {

@@ -1,17 +1,16 @@
 use std::fmt::Display;
 
 use actix_web::{
-    HttpRequest, HttpResponse, post,
+    HttpRequest, HttpResponse, delete, post,
     web::{self, Data, Form},
 };
 use askama::Template;
-use chrono::DateTime;
-use mongodb::bson::doc;
+use mongodb::bson::{DateTime as BsonDateTime, doc};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::JournalFormTemplate,
+    endpoints::templates::{JournalPostEdit, JournalPostEditor},
     models::{
         mongo::{self, JournalDraft},
         redis_conf::{self, authenticated_user_id},
@@ -42,8 +41,7 @@ pub struct BlogPost {
     body: String,
     author: String,
     user_id: String,
-    #[serde(default)]
-    date: DateTime<chrono::Utc>,
+    date: BsonDateTime,
     #[serde(default)]
     logged_in: bool,
 }
@@ -53,6 +51,7 @@ impl BlogPost {
     pub fn to_name() -> String {
         String::from("BlogPosts")
     }
+    #[must_use]
     pub fn new(
         title: String,
         body: String,
@@ -65,7 +64,7 @@ impl BlogPost {
             body,
             author,
             user_id,
-            date: chrono::Utc::now(),
+            date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
             logged_in,
         }
     }
@@ -86,7 +85,7 @@ impl BlogPost {
     }
 
     #[must_use]
-    pub const fn get_date(&self) -> &DateTime<chrono::Utc> {
+    pub const fn get_date(&self) -> &BsonDateTime {
         &self.date
     }
 
@@ -123,7 +122,7 @@ impl Default for BlogPost {
             author: String::new(),
             user_id: String::new(),
             logged_in: false,
-            date: chrono::Utc::now(),
+            date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
         }
     }
 }
@@ -285,7 +284,7 @@ pub async fn submit_text(
             //         "Entry published but draft cleanup failed"
             //     );
             // }
-            let blog_template = JournalFormTemplate::new(vec![new_entry]);
+            let blog_template = JournalPostEdit::new(new_entry);
 
             let render = match blog_template.render() {
                 Ok(html) => html,
@@ -312,6 +311,149 @@ pub async fn submit_text(
 
             HttpResponse::InternalServerError()
                 .body("Publishing failed. Yor saved draft remains available.")
+        }
+    }
+}
+
+/// Endpoint to edit a submission. This endpoint retrieves the latest journal entry for the authenticated user and renders it in an editable form.
+/// # Errors
+///
+/// - Returns `HttpResponse::Unauthorized` if the user is not authenticated.
+/// - Returns `HttpResponse::InternalServerError` if there is an issue connecting to the database or retrieving the journal entry.
+/// - Returns `HttpResponse::NotFound` if no journal entry is found for the authenticated user.
+#[allow(clippy::future_not_send)]
+#[post("/edit_submission")]
+pub async fn edit_submission(
+    reids_client: Data<r2d2::Pool<redis::Client>>,
+    mongo_client: Data<mongodb::Client>,
+    Form(input): web::Form<JournalDraftInput>,
+    req: HttpRequest,
+) -> HttpResponse {
+    tracing::info!("Edit submission endpoint");
+
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &reids_client).await {
+        Ok(user_oid) => user_oid,
+        Err(err) => {
+            tracing::error!(?err, "Unable to authenticate the user");
+            return HttpResponse::Unauthorized().finish();
+        }
+    };
+
+    // let journal_entries = match mongo::establish_connection(&mongo_client).await {
+    //     Ok(conn) => conn,
+    //     Err(err) => {
+    //         tracing::error!(?err, "Unable to procure a db connection");
+    //         return HttpResponse::InternalServerError().finish();
+    //     }
+    // }
+    // .collection::<BlogPost>("BlogPosts");
+
+    // // Find the latest journal entry for the authenticated user
+    // let filter = doc! {
+    //     "user_id": user_oid.to_string(),
+    //     "sort": { "date": -1 },
+    //     "limit": 1
+    // };
+    // // Get the latest entry by sorting in descending order based on the creation timestamp
+
+    // // The exact data to be updated
+    // let update_doc = doc! {
+    // "$set": doc! {
+    //     "body": input.get_body(),
+    //     "date": BsonDateTime::now(),
+    // }
+    // };
+
+    // let entry = match journal_entries
+    //     .find_one_and_update(filter, update_doc)
+    //     .await
+    // {
+    //     Ok(Some(entry)) => {
+    //         tracing::warn!("The results of the upadte: {entry}");
+    //         entry
+    //     }
+    //     Ok(None) => {
+    //         tracing::warn!(%user_oid, "No journal entry found for the user");
+    //         return HttpResponse::NotFound().body("No journal entry found for the user");
+    //     }
+    //     Err(err) => {
+    //         tracing::error!(?err, %user_oid, "Unable to retrieve the journal entry");
+    //         return HttpResponse::InternalServerError()
+    //             .body("Unable to retrieve the journal entry");
+    //     }
+    // };
+
+    let entry = BlogPost::new(
+        input.title.to_string(),
+        input.body.to_string(),
+        input.author.to_string(),
+        user_oid.to_string(),
+        true,
+    );
+
+    let edit_template = JournalPostEditor::new(entry);
+
+    let render = match edit_template.render() {
+        Ok(html) => html,
+        Err(err) => {
+            tracing::error!(
+                ?err,
+                %user_oid,
+                "Entry retrieved but rendering failed"
+            );
+            return HttpResponse::InternalServerError()
+                .body("Entry retrieved but rendering failed.");
+        }
+    };
+
+    HttpResponse::Ok().body(render)
+}
+
+/// Delete the most immediately posted post from the user
+#[allow(clippy::future_not_send)]
+#[delete("/delete_submission")]
+pub async fn delete_submission(
+    req: HttpRequest,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+) -> HttpResponse {
+    tracing::info!("Delete submission endpoint");
+
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(user_oid) => user_oid,
+        Err(err) => {
+            tracing::error!(?err, "Unable to authenticate the user");
+            return HttpResponse::Unauthorized().finish();
+        }
+    };
+
+    let journal_entries = match mongo::establish_connection(&mongo_client).await {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!(?err, "Unable to procure a db connection");
+            return HttpResponse::InternalServerError().finish();
+        }
+    }
+    .collection::<BlogPost>("BlogPosts");
+
+    let filter = doc! {
+        "$query": {
+            "user_id": user_oid.to_string()
+    },
+        "$orderby": {
+            "date": -1
+        },
+        "$limit": 1
+    };
+
+    match journal_entries.delete_one(filter).await {
+        Ok(deleted_entry) => {
+            tracing::info!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
+            HttpResponse::Ok().json("Journal entry deleted successfully")
+        }
+        Err(err) => {
+            tracing::error!(?err, %user_oid, "Unable to delete the journal entry");
+            HttpResponse::InternalServerError().json("Unable to delete the journal entry")
         }
     }
 }

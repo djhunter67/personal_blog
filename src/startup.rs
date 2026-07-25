@@ -64,7 +64,7 @@ async fn run(
     // Connect to the MongoDB database
     let db_redis = Data::new(redis_pool);
     let db_mongo = Data::new(mongo_pool);
-    // info!("Processed DB connection pool for distribution");
+    tracing::info!("Processed DB & Cache connection pool for distribution");
 
     let server = HttpServer::new(move || {
         App::new()
@@ -107,7 +107,9 @@ async fn run(
                     .service(settings::settings_template)
                     .service(settings::settings_change)
                     .service(validate_email::validate_email)
-                    .service(user_input::submit_text),
+                    .service(user_input::submit_text)
+                    .service(user_input::edit_submission)
+                    .service(user_input::delete_submission),
             )
             .route("/sse", web::get().to(index::sse))
     })

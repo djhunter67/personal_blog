@@ -145,12 +145,14 @@ body {
 #template_pages #main__info_cards {
   display: grid;
   grid-template-rows: repeat(auto-fit, minmax(5rem, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-top: 20px;
   width: 100%;
   box-sizing: border-box;
 }
 #template_pages #main__info_cards .card {
+  grid-column: 1/-1;
   background-color: white;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
@@ -189,54 +191,58 @@ body {
   font-size: large;
   padding-right: 1rem;
 }
-#template_pages #main__user_text {
+#template_pages #main__info_cards__journaler {
+  grid-column: 1/-1;
   margin-top: 2rem;
-  outline: 1px solid violet;
-}
-#template_pages #main__user_text__journaler {
+  outline: 1px solid darkgray;
   display: flex;
   flex-direction: column;
   outline: black 2px dashed;
   border-radius: 2rem;
+  padding: 1rem 0;
 }
-#template_pages #main__user_text__journaler__title {
+#template_pages #main__info_cards__journaler__title {
   background: transparent;
-  font-family: "Georgia", serif; /* Serif fonts often feel more "journal-like" */
-  font-size: 1.1rem;
-  line-height: 1.6;
-  padding: 0.22rem 0;
+  font-family: "Georgia", serif;
+  /* Serif fonts often feel more "journal-like" */
+  font-size: 2.1rem;
+  line-height: 2.6;
+  padding-top: 0.22rem;
   color: #333;
   border-radius: 0.33rem;
   margin: 1.2rem 0.2rem;
   border-bottom: black 1px solid;
 }
-#template_pages #main__user_text__journaler__body {
+#template_pages #main__info_cards__journaler__body {
   background: transparent;
-  resize: vertical; /* Allows user to expand height */
-  font-family: "Georgia", serif; /* Serif fonts often feel more "journal-like" */
-  font-size: 1.1rem;
-  line-height: 1.6;
+  resize: vertical;
+  /* Allows user to expand height */
+  font-family: "Georgia", serif;
+  /* Serif fonts often feel more "journal-like" */
+  font-size: 2.1rem;
+  line-height: 2.6;
   padding: 0.22rem 0;
   color: #333;
   border-radius: 0.33rem;
   margin: 1rem 0.2rem;
   border-bottom: 1px solid black;
 }
-#template_pages #main__user_text__journaler__body:focus {
+#template_pages #main__info_cards__journaler__body:focus {
   background: rgba(0, 0, 0, 0.06);
 }
-#template_pages #main__user_text__journaler__author {
+#template_pages #main__info_cards__journaler__author {
   background: transparent;
   border: none;
-  font-family: "Georgia", serif; /* Serif fonts often feel more "journal-like" */
-  font-size: 1.1rem;
-  line-height: 1.6;
+  font-family: "Georgia", serif;
+  /* Serif fonts often feel more "journal-like" */
+  font-size: 2.1rem;
+  line-height: 2.6;
   padding: 0.22rem 0;
   color: #333;
   border-radius: 0.33rem;
   margin: 2rem 0.2rem;
 }
-#template_pages #main__user_text__journaler button {
+#template_pages #main__info_cards__journaler button {
   background-color: coral;
   color: white;
   border: none;
@@ -245,6 +251,23 @@ body {
   margin: 1rem 0;
   font-size: 1rem;
   cursor: pointer;
+}
+#template_pages #main__info_cards__confirmation {
+  grid-row: 4/5;
+  grid-column: 1/2;
+}
+#template_pages #main__info_cards__confirmation button {
+  background-color: green;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 16px;
+  margin: 1rem 0;
+  font-size: 1rem;
+  cursor: pointer;
+}
+#template_pages #main__info_cards__confirmation button:hover {
+  background-color: darkgreen;
 }
 #template_pages footer {
   grid-column: 1/-1;

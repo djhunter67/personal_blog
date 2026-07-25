@@ -98,6 +98,32 @@ impl JournalFormTemplate {
     }
 }
 
+#[derive(Template)]
+#[template(path = "parts/post_edit.part.html")]
+pub struct JournalPostEdit {
+    content: BlogPost,
+}
+
+impl JournalPostEdit {
+    #[must_use = "This function is used to allow a user to edit their post"]
+    pub const fn new(content: BlogPost) -> Self {
+        Self { content }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "parts/journal_form_input.part.html")]
+pub struct JournalPostEditor {
+    content: BlogPost,
+}
+
+impl JournalPostEditor {
+    #[must_use = "This function is used to allow a user to edit their post"]
+    pub const fn new(content: BlogPost) -> Self {
+        Self { content }
+    }
+}
+
 // #[derive(Template)]
 // #[template(path = "parts/posts.part.html")]
 // pub struct PostPart {

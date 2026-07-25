@@ -1,0 +1,44 @@
+  
+  <div class="card">
+    <div class="card__header">
+      <img src="https://1.pravatar.cc/301" alt="card image">
+      <h2 id="get_title">{{ content.get_title() }}</h2>
+      <h3 id="get_authore">Author: {{content.get_author()}}</h3>
+    </div>
+    <div class="card__text" id="card__0">
+      <p id="get_body">
+        {{ content.get_body() }}
+      </p>
+      <h3>
+	{{ content.get_date() }} --> User ID: {{ content.get_user_id() }}
+      </h3>
+    </div>
+  </div>
+
+  <aside id="main__info_cards__confirmation">
+    <button
+      id="main__confirmation__submit"
+      hx-get="/"
+      hx-target="#template_pages"
+      hx-swap="outerHTML"
+      hx-trigger="click"
+      hx-target-error="#error_template">
+      CONFIRM
+    </button>
+    <button
+      id="main__confirmation__edit"
+      hx-post="/v1/edit_submission"
+      hx-vals='{"title": "{{content.get_title()}}", "body": "{{content.get_body()}}", "author": "{{content.get_body()}}"}'
+      hx-target="#page_contents"
+      hx-swap="innerHTML">
+      EDIT
+    </button>
+    <button
+      id="main__confirmation__delete"
+      hx-get="/v1/delete_submission"
+      >
+      DELETE
+    </button>
+  </aside>
+
+
