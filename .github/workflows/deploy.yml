@@ -1,0 +1,108 @@
+name: Build and deploy
+
+on:
+  push:
+    branches:
+      - trunk
+
+concurrency:
+  group: personal-blog-production
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/djhunter67/personal_blog
+
+jobs:
+  test:
+    name: Test Rust application
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests
+        run: cargo test --locked
+
+  publish:
+    name: Build ARM64 image
+    needs: test
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Configure Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=trunk
+            type=sha,format=long
+
+      - name: Build and publish ARM64 image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          push: true
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy production
+    needs: publish
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - personal-blog-deployer
+
+    permissions:
+      contents: none
+
+    environment:
+      name: production
+      url: https://sundaylifeservices.com
+
+    steps:
+      - name: Deploy through restricted SSH
+        run: |
+          ssh \
+            -i "$HOME/.ssh/personal_blog_deploy" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            ripley@10.20.20.32
