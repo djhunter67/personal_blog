@@ -5,7 +5,10 @@ use actix_web::{
     web::{self, Data, Form},
 };
 use askama::Template;
-use mongodb::bson::{DateTime as BsonDateTime, doc};
+use mongodb::{
+    bson::{DateTime as BsonDateTime, doc},
+    options::{FindOneAndUpdateOptions, ReturnDocument},
+};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -339,50 +342,6 @@ pub async fn edit_submission(
         }
     };
 
-    // let journal_entries = match mongo::establish_connection(&mongo_client).await {
-    //     Ok(conn) => conn,
-    //     Err(err) => {
-    //         tracing::error!(?err, "Unable to procure a db connection");
-    //         return HttpResponse::InternalServerError().finish();
-    //     }
-    // }
-    // .collection::<BlogPost>("BlogPosts");
-
-    // // Find the latest journal entry for the authenticated user
-    // let filter = doc! {
-    //     "user_id": user_oid.to_string(),
-    //     "sort": { "date": -1 },
-    //     "limit": 1
-    // };
-    // // Get the latest entry by sorting in descending order based on the creation timestamp
-
-    // // The exact data to be updated
-    // let update_doc = doc! {
-    // "$set": doc! {
-    //     "body": input.get_body(),
-    //     "date": BsonDateTime::now(),
-    // }
-    // };
-
-    // let entry = match journal_entries
-    //     .find_one_and_update(filter, update_doc)
-    //     .await
-    // {
-    //     Ok(Some(entry)) => {
-    //         tracing::warn!("The results of the upadte: {entry}");
-    //         entry
-    //     }
-    //     Ok(None) => {
-    //         tracing::warn!(%user_oid, "No journal entry found for the user");
-    //         return HttpResponse::NotFound().body("No journal entry found for the user");
-    //     }
-    //     Err(err) => {
-    //         tracing::error!(?err, %user_oid, "Unable to retrieve the journal entry");
-    //         return HttpResponse::InternalServerError()
-    //             .body("Unable to retrieve the journal entry");
-    //     }
-    // };
-
     let entry = BlogPost::new(
         input.title.to_string(),
         input.body.to_string(),
@@ -390,6 +349,119 @@ pub async fn edit_submission(
         user_oid.to_string(),
         true,
     );
+
+    let edit_template = JournalPostEditor::new(entry);
+
+    let render = match edit_template.render() {
+        Ok(html) => html,
+        Err(err) => {
+            tracing::error!(
+                ?err,
+                %user_oid,
+                "Entry retrieved but rendering failed"
+            );
+            return HttpResponse::InternalServerError()
+                .body("Entry retrieved but rendering failed.");
+        }
+    };
+
+    HttpResponse::Ok().body(render)
+}
+
+/// Update the text of the most recently posted journal entry for the authenticated user.
+#[allow(clippy::future_not_send)]
+#[post("/update_text")]
+pub async fn update_text(
+    req: HttpRequest,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+    Form(input): web::Form<JournalDraftInput>,
+) -> HttpResponse {
+    tracing::info!("Update text endpoint");
+
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(user_oid) => user_oid,
+        Err(err) => {
+            tracing::error!(?err, "Unable to authenticate the user");
+            return HttpResponse::Unauthorized().finish();
+        }
+    };
+
+    let journal_entries = match mongo::establish_connection(&mongo_client).await {
+        Ok(conn) => conn,
+        Err(err) => {
+            tracing::error!(?err, "Unable to procure a db connection");
+            return HttpResponse::InternalServerError().finish();
+        }
+    }
+    .collection::<BlogPost>("BlogPosts");
+
+    // Find the latest journal entry for the authenticated user
+    let filter = doc! {
+        "user_id": user_oid.to_string(),
+    };
+    // Get the latest entry by sorting in descending order based on the creation timestamp
+
+    // The exact data to be updated
+    let update_doc = doc! {
+    "$set": doc! {
+        "body": input.get_body(),
+        "date": BsonDateTime::now(),
+    }
+    };
+
+    let options = FindOneAndUpdateOptions::builder()
+        .sort(doc! { "date": -1 }) // Sort by date in descending order
+        .return_document(ReturnDocument::After) // Return the updated document
+        .build();
+
+    let entry: BlogPost = match journal_entries
+        .find_one_and_update(filter, update_doc)
+        .with_options(options)
+        .await
+    {
+        Ok(Some(entry)) => {
+            tracing::warn!("The results of the upadte: {entry:#?}");
+            // Some(entry);
+            entry
+        }
+        Ok(None) => {
+            tracing::warn!(%user_oid, "No journal entry found for the user to update the posts");
+            return HttpResponse::NotFound()
+                .body("No journal entry found for the user to update the post");
+        }
+        Err(err) => {
+            tracing::error!(?err, %user_oid, "Unable to retrieve the journal entry");
+            return HttpResponse::InternalServerError()
+                .body("Unable to retrieve the journal entry");
+        }
+    };
+
+    // if entry.matched_count.ne(&0) {
+    //     tracing::warn!(%user_oid, "User update returned more than one entry: {entry:#?}");
+    //     return HttpResponse::InternalServerError()
+    //         .body("User update returned more than one entry. This should not happen.");
+    // }
+
+    // get the updated entry from the database to render it
+    // let updated_entry: BlogPost = match journal_entries
+    //     .find_one(doc! { "_id": &user_oid.to_string() })
+    //     .await
+    // {
+    //     Ok(Some(entry)) => entry,
+    //     Ok(None) => {
+    //         tracing::warn!(
+    // 		%user_oid, "No journal entry found for the user after update when querying the updated entry");
+    //         return HttpResponse::NotFound()
+    //             .body("No journal entry found for the user after update");
+    //     }
+
+    //     Err(err) => {
+    //         tracing::error!(?err, %user_oid, "Unable to retrieve the updated journal entry");
+    //         return HttpResponse::InternalServerError()
+    //             .body("Unable to retrieve the updated journal entry");
+    //     }
+    // };
 
     let edit_template = JournalPostEditor::new(entry);
 

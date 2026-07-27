@@ -36,8 +36,7 @@ pub fn establish_connection(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserSession {
-    pub user_id: String,
-    pub email: String,
+    pub oid: String,
 }
 
 #[derive(Debug)]
@@ -52,6 +51,13 @@ pub enum AuthenticationError {
 /// - `AuthenticationError::MissingSession` if the session cookie is missing
 /// - `AuthenticationError::InvalidSession` if the session is invalid
 /// - `AuthenticationError::Redis` if there is an error connecting to Redis
+#[allow(clippy::future_not_send)]
+#[instrument(
+    name = "Serving main page",
+    level = "debug",
+    target = "actix_web::main",
+    skip(redis_client, req, mongo_client)
+)]
 pub async fn authenticated_user_id(
     req: &HttpRequest,
     mongo_client: &Data<mongodb::Client>,
@@ -74,9 +80,9 @@ pub async fn authenticated_user_id(
 
     tracing::warn!("Checking that the email to check against is valid: {user_email:#?}");
 
-    let user_id_key = format!("auth:user:{}", user_email.clone().unwrap_or_default());
+    let cache_key = format!("user:auth:{}", user_email.clone().unwrap_or_default());
     let user_id: Option<String> = redis_conn
-        .get(&user_id_key)
+        .get(&cache_key)
         .map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Checking that the serialized session is valid: {user_id:#?}");
@@ -105,24 +111,43 @@ pub async fn authenticated_user_id(
             }
 
             tracing::error!(
-                "No user data associated with the received session key: {user_session}"
+                "No user data associated with the received session key: {}",
+                user_session.to_string()
             );
             Err(AuthenticationError::InvalidSession)?
         }
         Some(user_bson_oid) => {
-            tracing::warn!("Cache-Hit: {user_bson_oid}");
+            tracing::warn!(
+                "Cache-Hit: {}",
+                user_bson_oid
+                    .split(':')
+                    .next_back()
+                    .unwrap_or_default()
+                    .trim_matches('}')
+                    .trim_matches('"')
+            );
             user_bson_oid
+                .split(':')
+                .next_back()
+                .unwrap_or_default()
+                .trim_matches('}')
+                .trim_matches('"')
+                .parse::<ObjectId>()
+                .map_err(|err| {
+                    tracing::error!("Failed to parse ObjectId from session: {err:#?}");
+                    AuthenticationError::InvalidSession
+                })?
         }
     };
 
     // .ok_or(AuthenticationError::InvalidSession)?;
 
-    // tracing::info!("Converting the session to a json object: {user_id:#?}");
     // let session: UserSession =
     // serde_json::from_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)?;
 
-    tracing::warn!("Passing back the ObjectId from the session: {user_id:#?}");
-    ObjectId::parse_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)
+    // tracing::warn!("Passing back the ObjectId from the session: {user_id:#?}");
+    // ObjectId::parse_str(session).map_err(|_| AuthenticationError::InvalidSession)
+    Ok(user_id)
 }
 
 #[cfg(test)]

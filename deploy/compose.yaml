@@ -1,0 +1,54 @@
+services:
+  app:
+    image: ghcr.io/djhunter67/personal_blog:trunk
+    container_name: personal-journal-app
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      PJ__MONGO__URI: >-
+        mongodb://admin:${DATABASE_PW}@10.20.20.205:27017/?authMechanism=SCRAM-SHA-256&directConnection=true&replicaSet=rs0
+
+      PJ__REDIS__URI: >-
+        redis://:${REDIS_PW}@10.20.20.202:6379
+
+      RUST_LOG: info
+
+    expose:
+      - "8123"
+
+    networks:
+      - journal-web
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: personal-journal-nginx
+    restart: unless-stopped
+
+    depends_on:
+      - app
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+
+    networks:
+      - journal-web
+
+  certbot:
+    image: certbot/certbot:latest
+
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
+networks:
+  journal-web:
+    name: personal-journal-web

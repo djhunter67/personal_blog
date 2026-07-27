@@ -109,6 +109,7 @@ async fn run(
                     .service(validate_email::validate_email)
                     .service(user_input::submit_text)
                     .service(user_input::edit_submission)
+                    .service(user_input::update_text)
                     .service(user_input::delete_submission),
             )
             .route("/sse", web::get().to(index::sse))

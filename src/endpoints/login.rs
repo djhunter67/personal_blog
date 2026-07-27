@@ -80,16 +80,16 @@ pub async fn login_user(
     debug!("The user data entered: {:#?}", body.0);
 
     // Validate the user data entered
-    let useremail: &str = body.0.email.as_str();
+    let user_email: &str = body.0.email.as_str();
     let password: &str = body.0.password.as_str();
 
     let filter = mongodb::bson::doc! {
-    "email":  useremail
+    "email":  user_email
     };
 
     // Check redis first
-    tracing::info!("Checking the cache-layer for: {useremail}");
-    let cache_key = format!("user:auth:{useremail}");
+    tracing::info!("Checking the cache-layer for: {user_email}");
+    let cache_key = format!("user:auth:{user_email}");
     let mut redis_conn = match redis_conf::establish_connection(&redis) {
         Ok(conn) => conn,
         Err(err) => {
@@ -113,7 +113,7 @@ pub async fn login_user(
         // redundant Option to satisfy the compiler
         tracing::warn!("cache-hit: {json_data:#?}");
 
-        let mut json_result = LoginChecker::new(useremail.to_string(), password.to_string());
+        let mut json_result = LoginChecker::new(user_email.to_string(), password.to_string());
 
         // let mut json_result: LoginChecker = match serde_json::from_str::<LoginChecker>(&json_data) {
         //     Ok(json_result) => json_result,
@@ -186,5 +186,5 @@ pub async fn login_user(
 
     // THIS RETURN VAL IS TEMPORARY
     tracing::error!("PASSWORD INCORRECT");
-    return HttpResponse::Ok().body(format!("Invalid user entered credentials: {useremail}"));
+    return HttpResponse::Ok().body(format!("Invalid user entered credentials: {user_email}"));
 }

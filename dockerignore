@@ -1,0 +1,14 @@
+.git
+.github
+target
+.env
+.env.*
+!.env.example
+settings/local.yaml
+settings/production.yaml
+*.db
+*.sqlite
+*.sqlite3
+Dockerfile*
+docker-compose*.yml
+README.md

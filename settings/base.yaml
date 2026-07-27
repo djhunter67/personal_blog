@@ -2,15 +2,15 @@ application:
   port: 8123
 
 mongo:
- uri: "mongodb://admin:<password>"
+ uri: ""
  db: "personal_blog"
- collection: "development"
+ collection: "Users"
  require_auth: true
  pool_size: 1
  connection_timeout: 1
 
 redis:
-  uri: "redis://:<password>
+  uri: ""
   key: "session:"
   pool_size: 1
   pool_max_open: 16
