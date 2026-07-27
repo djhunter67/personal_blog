@@ -61,7 +61,7 @@ jobs:
   publish:
     name: Build ARM64 image
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     permissions:
       contents: read
