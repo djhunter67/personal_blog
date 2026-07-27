@@ -21,7 +21,6 @@ jobs:
       - self-hosted
       - linux
       - x64
-      - personal-blog-deployer
 
     permissions:
       contents: read
@@ -116,7 +115,6 @@ jobs:
       - self-hosted
       - linux
       - x64
-      - personal-blog-deployer
 
     permissions:
       contents: none
