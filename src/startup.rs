@@ -8,7 +8,7 @@ use actix_web::{App, HttpServer, http::KeepAlive, middleware};
 use r2d2::ManageConnection;
 use std::net;
 use std::time::Duration;
-use tracing::{debug, info, instrument, warn};
+use tracing::{instrument, warn};
 
 pub const PARSE_COUNT: u8 = 9;
 
@@ -27,6 +27,7 @@ async fn run(
         Err(err) => {
             tracing::error!("Unable to connect to the cache layer: {err:#?}");
             panic!("Application cannot start: {err:#?}")
+            // try to connect to a locally running instance of redis
         }
     };
     let redis_pool: r2d2::Pool<redis::Client> = match r2d2::Pool::builder()
@@ -149,14 +150,14 @@ impl Application {
         skip(settings)
     )]
     pub async fn build(settings: &mut crate::settings::Settings) -> Result<Self, std::io::Error> {
-        info!("Buidling the main application");
+        tracing::info!("Buidling the main application");
 
         let app_address = format!(
             "{}:{}",
             settings.application.host, settings.application.port
         );
 
-        debug!("Binding the TCP port: {app_address}");
+        tracing::info!("Binding the TCP port: {app_address}");
         let listener: net::TcpListener = net::TcpListener::bind(&app_address)?;
         let port = listener.local_addr()?.port();
         let server = run(listener, settings.clone()).await?;
@@ -176,7 +177,7 @@ impl Application {
     /// # Panics
     ///  - If the application could not be started
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
-        info!("Running until stopped");
+        tracing::info!("Running until stopped");
         self.server.await
     }
 }

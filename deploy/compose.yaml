@@ -8,10 +8,10 @@ services:
       - .env
 
     environment:
-      PJ__MONGO__URI: >-
+      APP_MONGO__URI: >-
         mongodb://admin:${DATABASE_PW}@10.20.20.205:27017/?authMechanism=SCRAM-SHA-256&directConnection=true&replicaSet=rs0
 
-      PJ__REDIS__URI: >-
+      APP_REDIS__URI: >-
         redis://:${REDIS_PW}@10.20.20.202:6379
 
       RUST_LOG: info

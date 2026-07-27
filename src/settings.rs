@@ -106,10 +106,16 @@ impl TryFrom<String> for Environment {
 /// followed by "__" separator,  and then the variable.
 /// # Example
 ///   - ``APP__APPLICATION_PORT=5001`` for "port" to be set as "5001"
-#[instrument(name = "Get Settings", level = "info", target = "demo_web_app")]
+#[instrument(name = "Get Settings", level = "info", target = "personal_blog")]
 pub fn get() -> Result<Settings, config::ConfigError> {
     // println!("Getting the system config settings");
-    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
+    let base_path = match std::env::current_dir() {
+        Ok(path) => path,
+        Err(err) => {
+            tracing::error!("Unable to procure the current dir: {err}");
+            panic!("Application cannot find the current directory to load the settings")
+        }
+    };
     // println!("The base path is {base_path:?}");
     let setting_directory = base_path.join("settings");
     // println!("The setting directory is {setting_directory:?}");
@@ -121,7 +127,7 @@ pub fn get() -> Result<Settings, config::ConfigError> {
         Ok(env) => env,
         Err(err) => return Err(config::ConfigError::Message(err)),
     };
-    // println!("The environment is {:?}", environment.as_str());
+    // eprintln!("The environment is {:#?}", environment.as_str());
     let environment_filename = format!("{}.yaml", environment.as_str());
 
     // println!(
@@ -141,7 +147,15 @@ pub fn get() -> Result<Settings, config::ConfigError> {
         .build()
     {
         Ok(settings) => {
-            tracing::debug!("Successfully loaded the settings");
+            // eprintln!(
+            //     "Successfully loaded the settings: {:#?}",
+            //     settings
+            //         .clone()
+            //         .try_deserialize::<Settings>()
+            //         .expect("Failed to deserialize the settings")
+            //         .mongo
+            // );
+
             settings
         }
         Err(err) => {

@@ -16,10 +16,21 @@ env:
 jobs:
   test:
     name: Test Rust application
-    runs-on: ubuntu-latest
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - personal-blog-deployer
 
     permissions:
       contents: read
+
+    env:
+      APP_ENVIRONMENT: development
+      APP_MONGO__URI: ${{ secrets.DB_URI }}
+      APP_REDIS__URI: ${{ secrets.CACHE_URI }}
+      RUST_LOG: info
 
     steps:
       - name: Check out repository
@@ -28,9 +39,25 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Verify required secrets are available
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${APP_MONGO__URI:-}" ]]; then
+            echo "::error::DB_URI is missing from GitHub Actions secrets"
+            exit 1
+          fi
+
+          if [[ -z "${APP_REDIS__URI:-}" ]]; then
+            echo "::error::CACHE_URI is missing from GitHub Actions secrets"
+            exit 1
+          fi
+
+          echo "Database URI secrets are available."
+
       - name: Run tests
         run: cargo test --locked
-
   publish:
     name: Build ARM64 image
     needs: test
