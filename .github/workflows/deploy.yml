@@ -28,8 +28,8 @@ jobs:
 
     env:
       APP_ENVIRONMENT: development
-      APP_MONGO__URI: ${{ secrets.DB_URI }}
-      APP_REDIS__URI: ${{ secrets.CACHE_URI }}
+      APP_MONGO__URI: ${{ secrets.APP_MONGO__URI }}
+      APP_REDIS__URI: ${{ secrets.APP_REDIS__URI }}
       RUST_LOG: info
 
     steps:
