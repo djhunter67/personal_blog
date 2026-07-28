@@ -159,6 +159,7 @@ pub async fn register_user(
             tracing::info!("Database save successful");
 
             let cache_key = format!("user:auth:{email}");
+
             tracing::info!("Saving the cache-key to the cache-layer: {cache_key}");
 
             // let auth_data = LoginChecker::new(email, encrypted_pw.get());
