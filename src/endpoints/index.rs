@@ -6,7 +6,6 @@ use crate::{
         mongo,
         redis_conf::{self, authenticated_user_id},
     },
-    settings,
 };
 
 use super::templates::IndexTemplate;
@@ -20,7 +19,7 @@ use actix_web::{
 };
 use askama::Template;
 use futures::{StreamExt, stream};
-use tracing::{info, instrument};
+use tracing::instrument;
 
 #[allow(clippy::future_not_send)]
 #[instrument(
@@ -36,15 +35,16 @@ pub async fn index(
     redis_client: Data<r2d2::Pool<redis::Client>>,
     mongo_client: Data<mongodb::Client>,
 ) -> HttpResponse {
-    info!("Serving main page");
+    tracing::info!("Serving main page");
+
+    tracing::warn!("The req cookies found: {:#?}", req.cookies());
 
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         cookie.value().to_string()
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
-        let var_name = String::new();
-        let var_name = IndexTemplate::new("Home".to_string(), vec![], var_name, false);
+        let var_name = IndexTemplate::new("Home".to_string(), vec![], String::new(), false);
 
         let rendered = var_name.render().expect("Failed to render template");
 
@@ -66,19 +66,12 @@ pub async fn index(
         Err(err) => {
             tracing::error!("Unable to acquire the redis connection: {err:#?}");
             return HttpResponse::InternalServerError()
-                .body(format!("Cache layer error: {err:#?}"));
+                .json(format!("Cache layer error: {err:#?}"));
         }
     };
 
     tracing::info!("Creating the session key");
-    let session_key = format!(
-        "{}{}",
-        &settings::get()
-            .expect("Unable to procure the app settings")
-            .redis
-            .key,
-        session_id
-    );
+    let session_key = format!("session:{}", session_id);
 
     tracing::info!("Searching for the session key: {session_key}");
     let user = match redis::cmd("GET")
@@ -89,7 +82,7 @@ pub async fn index(
         Err(err) => {
             tracing::error!("Error accessing the cache layer: {err:#?}");
             return HttpResponse::InternalServerError()
-                .body(format!("Unable to acquire the cache layer: {err:#?}"));
+                .json(format!("Unable to acquire the cache layer: {err:#?}"));
         }
     };
 
@@ -111,7 +104,7 @@ pub async fn index(
                     Ok(collection) => collection,
                     Err(err) => {
                         tracing::error!("Error accessing the database: {err:#?}");
-                        return HttpResponse::InternalServerError().body(format!(
+                        return HttpResponse::InternalServerError().json(format!(
                             "Unable to acquire the database connection: {err:#?}"
                         ));
                     }
@@ -134,7 +127,7 @@ pub async fn index(
                             Err(err) => {
                                 tracing::error!("Error retrieving document: {err:#?}");
                                 return HttpResponse::InternalServerError()
-                                    .body(format!("Error retrieving document: {err:#?}"));
+                                    .json(format!("Error retrieving document: {err:#?}"));
                             }
                         }
                     }
@@ -144,7 +137,7 @@ pub async fn index(
 
                 Err(err) => {
                     tracing::error!("Error accessing the database: {err:#?}");
-                    return HttpResponse::InternalServerError().body(format!(
+                    return HttpResponse::InternalServerError().json(format!(
                         "Unable to acquire the database connection: {err:#?}"
                     ));
                 }

@@ -37,6 +37,7 @@ pub async fn create_session(
         .secure(true)
         .same_site(actix_web::cookie::SameSite::Strict)
         .max_age(Duration::seconds(86400))
+        .expires(actix_web::cookie::time::OffsetDateTime::now_utc() + Duration::seconds(86400))
         .finish();
 
     let template = LoginTemplate {
@@ -47,6 +48,8 @@ pub async fn create_session(
     };
 
     let render = template.render().expect("unable to render web page");
+
+    tracing::info!("The session cookie to insert: {session_cookie}");
 
     HttpResponse::Ok().cookie(session_cookie).body(render)
 }

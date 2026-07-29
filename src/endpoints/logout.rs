@@ -11,16 +11,16 @@ use crate::{endpoints::templates::IndexTemplate, models::redis_conf};
     name = "User logout attempted",
     level = "info",
     target = "sundayLifeServices web app",
-    skip(redis)
+    skip(redis_client, req)
 )]
 pub async fn logout(
-    mongo: Data<mongodb::Client>,
-    redis: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
     req: HttpRequest,
 ) -> impl Responder {
     // extract the session key from the frontend
 
-    let mut redis_conn = match redis_conf::establish_connection(&redis) {
+    tracing::info!("Connecting to the cache layer to remove the session key");
+    let mut redis_conn = match redis_conf::establish_connection(&redis_client) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
@@ -41,7 +41,10 @@ pub async fn logout(
 
     let cache_key = format!("session:{session_id}");
     let _: () = match redis_conn.del::<String, ()>(cache_key) {
-        Ok(()) => (),
+        Ok(()) => {
+            tracing::info!("Successfully removed the session key");
+            ()
+        }
         Err(err) => {
             tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
             return HttpResponse::InternalServerError().body(format!(

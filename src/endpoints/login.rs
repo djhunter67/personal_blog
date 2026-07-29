@@ -99,10 +99,11 @@ pub async fn login_user(
         }
     };
 
+    // Get the user's key from when the user registered
     let cached_user: Option<String> = match redis_conn.get(cache_key) {
         Ok(cached_user) => Some(cached_user),
         Err(err) => {
-            tracing::warn!("cache-miss: {err}");
+            tracing::warn!("No registration keys detected: {err}");
             None
         }
     };
