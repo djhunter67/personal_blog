@@ -31,7 +31,7 @@ use crate::models::mongo;
 pub fn establish_connection(
     manager: &r2d2::Pool<redis::Client>,
 ) -> Result<PooledConnection<redis::Client>, redis::RedisResult<String>> {
-    Ok(manager.get().expect("No Redis cache layer available"))
+    Ok(manager.get().expect("No Cache layer available"))
 }
 
 #[derive(Debug, Serialize, Deserialize)]

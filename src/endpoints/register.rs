@@ -53,14 +53,11 @@ struct RegistrationData {
     target = "sundayLifeServices web app"
 )]
 pub async fn register_template() -> HttpResponse {
-    let user_name: &str = "sundaylife.mxa";
-    let user_password_1: &str = "password_1";
-    let user_password_2: &str = "password_2";
     let template = RegisterTemplate {
         title: "Registration",
-        content: [user_name, user_password_1, user_password_2].to_vec(),
+        content: vec![],
         is_logged_in: false,
-        user_email: user_name,
+        user_email: "",
     };
 
     let template = template.render().expect("About page render error");
