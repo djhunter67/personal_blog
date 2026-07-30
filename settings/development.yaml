@@ -10,4 +10,4 @@ secret:
   token_expiration: 30
   hmac_secret: "2oslbzxkbzlcy2yuwc797hzzc7b2fqkxyw5ubl8ixxne2gwbpzxg3c6phl9ra8hb"
 
-frontend_url: "http://localhost:8000"
+frontend_url: "http://localhost:8123"
