@@ -2,10 +2,7 @@
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
 use askama::Template;
 
-use crate::{
-    models::redis_conf::{self},
-    settings,
-};
+use crate::models::redis_conf::{self};
 
 #[derive(Template)]
 #[template(path = "parts/about.part.html")]
@@ -66,14 +63,7 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
     };
 
     tracing::info!("Creating the session key");
-    let session_key = format!(
-        "{}{}",
-        &settings::get()
-            .expect("Unable to procure the app settings")
-            .redis
-            .key,
-        session_id
-    );
+    let session_key = format!("session:{}", session_id);
 
     tracing::info!("Searching for the session key: {session_key}");
     let user = match redis::cmd("GET")

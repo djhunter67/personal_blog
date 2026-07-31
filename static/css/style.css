@@ -168,13 +168,6 @@ body {
   flex-direction: column;
   height: max-content;
 }
-#template_pages #main__info_cards .card__text p {
-  padding: 1rem;
-  font-size: 1.2rem;
-  color: #333;
-  flex-grow: 1;
-  text-indent: 5%;
-}
 #template_pages #main__info_cards .card__header {
   display: flex;
   align-items: start;
@@ -197,6 +190,18 @@ body {
   margin-left: 4rem;
   font-size: large;
   padding-right: 1rem;
+}
+#template_pages #main__info_cards .card__text p {
+  padding: 1rem;
+  font-size: 1.2rem;
+  color: #333;
+  flex-grow: 1;
+  text-indent: 5%;
+  font-weight: 700;
+  font-size: 2rem;
+}
+#template_pages #main__info_cards .card__text h3 {
+  margin-left: 2rem;
 }
 #template_pages #main__info_cards__journaler {
   grid-column: 1/-1;

@@ -39,13 +39,13 @@ use crate::{
 /// Restore recently deleted posts
 /// View the data the application stores
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct BlogPost {
     title: String,
     body: String,
     author: String,
     user_id: String,
     date: BsonDateTime,
-    #[serde(default)]
     logged_in: bool,
 }
 
@@ -88,8 +88,90 @@ impl BlogPost {
     }
 
     #[must_use]
-    pub const fn get_date(&self) -> &BsonDateTime {
-        &self.date
+    /// Get the date in a user readable format
+    /// # Error
+    ///
+    /// - If the date is not in a valid format, it will return an empty string
+    /// # Panic
+    ///
+    /// - If the time is not in a valid format, it will panic
+    /// - if the format passed in is not a valid ``BsonDatetime`` instance
+    pub fn get_date(&self) -> String {
+        // Make the date user readable in the following format: YYYY-MM-DD HH:MM:SS where the HH is in 24 hour format and the time zone is EST and the MM are the 3 letter day in uppercase
+        // let unreadable_date = &self.date.to_string();
+
+        let unreadable_date = &self.date.to_string();
+        let (month_date_year, time) = unreadable_date.split_once(' ').unwrap_or(("", ""));
+
+        let month_and_day = month_date_year
+            .split_once('-')
+            .map(|(_, m)| m)
+            .unwrap_or("");
+
+        let mut month = month_and_day.split('-').next().unwrap_or("");
+
+        let month_map = [
+            ("01", "JAN"),
+            ("02", "FEB"),
+            ("03", "MAR"),
+            ("04", "APR"),
+            ("05", "MAY"),
+            ("06", "JUN"),
+            ("07", "JUL"),
+            ("08", "AUG"),
+            ("09", "SEP"),
+            ("10", "OCT"),
+            ("11", "NOV"),
+            ("12", "DEC"),
+        ];
+
+        for (m, m_str) in month_map.iter() {
+            if month == *m {
+                // tracing::info!("Month: {}", m_str);
+                month = m_str;
+                break;
+            }
+        }
+
+        // tracing::info!("Month: {}", month);
+
+        let year = month_date_year
+            .split_once('-')
+            .map(|(y, _)| y)
+            .unwrap_or("");
+        // tracing::info!("Year: {}", year);
+        let day = month_date_year
+            .split_once('-')
+            .map(|(_, d)| d)
+            .unwrap_or("");
+        // tracing::info!("Day: {}", day);
+
+        let mut time = time
+            .split_once('.')
+            .map(|(t, _)| t)
+            .unwrap_or("")
+            .rsplit_once(':')
+            .map(|(h, _m)| format!("{}HRS", h))
+            .unwrap_or_else(|| time.to_string());
+
+        // tracing::info!("Zulu Time: {}", time);
+
+        // reduce the time by four hours to account for EST time zone
+        if let Some((h, m)) = time
+            .split_once('H')
+            .expect("Time conversion failure")
+            .0
+            .split_once(':')
+        {
+            if let Ok(h) = h.parse::<i32>() {
+                let h = h - 4; // (h - 4).rem_euclid(24);
+                time = format!("{h}:{m}HRS");
+            }
+        }
+
+        // tracing::info!("EST Time: {}", time);
+
+        format!("{}-{}-{} {} EST", year, month, day, time)
     }
 
     #[must_use]
@@ -97,8 +179,12 @@ impl BlogPost {
         &self.user_id
     }
 
-    pub const fn change_logged_in(&mut self, logged_in: bool) {
-        self.logged_in = logged_in;
+    pub fn set_user_id(&mut self, user_id: String) -> () {
+        self.user_id = user_id;
+    }
+
+    pub const fn toggle_logged_in(&mut self) {
+        self.logged_in = !self.logged_in;
     }
 
     #[must_use]
@@ -224,7 +310,7 @@ impl Display for JournalDraftInput {
 pub async fn submit_text(
     mongo_client: Data<mongodb::Client>,
     redis_client: Data<r2d2::Pool<redis::Client>>,
-    Form(input): web::Form<JournalDraftInput>,
+    Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
 ) -> HttpResponse {
     tracing::info!("Submit text endpoint");
@@ -237,13 +323,8 @@ pub async fn submit_text(
         }
     };
 
-    let title = input.title.trim();
-    let body = input.body.trim();
-    let author = input.author.trim();
-
-    if title.is_empty() | body.is_empty() {
-        return HttpResponse::BadRequest().body("A title and a body is required");
-    }
+    input.toggle_logged_in();
+    input.set_user_id(user_oid.to_string());
 
     let journal_entries = match mongo::establish_connection(&mongo_client).await {
         Ok(conn) => conn,
@@ -263,16 +344,16 @@ pub async fn submit_text(
     // }
     // .collection::<JournalDraft>("journal_entries");
 
-    let new_entry = BlogPost::new(
-        title.to_owned(),
-        body.to_owned(),
-        author.to_owned(),
-        user_oid.to_string(),
-        true,
-    );
-    tracing::warn!("Created BlogPost instance: {new_entry:#?}");
+    // let new_entry = BlogPost::new(
+    //     title.to_owned(),
+    //     body.to_owned(),
+    //     author.to_owned(),
+    //     user_oid.to_string(),
+    //     true,
+    // );
+    tracing::warn!("Reusing the passed in  BlogPost instance: {input:#?}");
 
-    match journal_entries.insert_one(&new_entry).await {
+    match journal_entries.insert_one(&input).await {
         Ok(_) => {
             // tracing::info!("Inserting a new journal entry");
             // if let Err(err) = drafts
@@ -287,7 +368,7 @@ pub async fn submit_text(
             //         "Entry published but draft cleanup failed"
             //     );
             // }
-            let blog_template = JournalPostEdit::new(new_entry);
+            let blog_template = JournalPostEdit::new(input);
 
             let render = match blog_template.render() {
                 Ok(html) => html,
@@ -329,7 +410,7 @@ pub async fn submit_text(
 pub async fn edit_submission(
     reids_client: Data<r2d2::Pool<redis::Client>>,
     mongo_client: Data<mongodb::Client>,
-    Form(input): web::Form<JournalDraftInput>,
+    Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
 ) -> HttpResponse {
     tracing::info!("Edit submission endpoint");
@@ -342,15 +423,10 @@ pub async fn edit_submission(
         }
     };
 
-    let entry = BlogPost::new(
-        input.title.to_string(),
-        input.body.to_string(),
-        input.author.to_string(),
-        user_oid.to_string(),
-        true,
-    );
+    input.toggle_logged_in();
+    input.set_user_id(user_oid.to_string());
 
-    let edit_template = JournalPostEditor::new(entry);
+    let edit_template = JournalPostEditor::new(input);
 
     let render = match edit_template.render() {
         Ok(html) => html,
@@ -482,6 +558,7 @@ pub async fn update_text(
 }
 
 /// Delete the most immediately posted post from the user
+// #[authenticate] // injects a variable `user_oid` into the request extensions
 #[allow(clippy::future_not_send)]
 #[delete("/delete_submission")]
 pub async fn delete_submission(

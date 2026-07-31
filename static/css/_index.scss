@@ -50,18 +50,6 @@
 			height: max-content;
 			// align-items: center;  // makes images smaller in regular screen size
 
-			&__text {
-
-				// flex: 0 0 70%;
-				p {
-					padding: 1rem;
-					font-size: 1.2rem;
-					color: #333;
-					flex-grow: 1;
-					text-indent: 5%;
-				}
-			}
-
 			&__header {
 				display: flex;
 				align-items: start;
@@ -88,12 +76,24 @@
 					font-size: large;
 					padding-right: 1rem;
 				}
+			}
 
-				// p {
-				//     padding-top: 1rem;
-				// }
+			&__text {
 
+				// flex: 0 0 70%;
+				p {
+				    padding: 1rem;
+				    font-size: 1.2rem;
+				    color: #333;
+				    flex-grow: 1;
+				    text-indent: 5%;
+				    font-weight: 700;
+				    font-size: 2rem;
+				}
 
+				h3 {
+				    margin-left: 2rem;
+				}
 			}
 		}
 

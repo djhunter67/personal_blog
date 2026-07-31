@@ -37,7 +37,7 @@ pub async fn index(
 ) -> HttpResponse {
     tracing::info!("Serving main page");
 
-    tracing::warn!("The req cookies found: {:#?}", req.cookies());
+    tracing::debug!("The req cookies found: {:#?}", req.cookies());
 
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         cookie.value().to_string()
