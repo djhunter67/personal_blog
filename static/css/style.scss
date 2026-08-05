@@ -35,7 +35,7 @@ $light-yellow: hsl(60, 100%, 90%);
     justify-content: center;
     overflow-x: hidden;
 
-    &__top {
+    &__top {	
 	grid-column: 1 / -1;
 	grid-row: 1 / 2;
 	background-color: $light-gray;

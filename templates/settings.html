@@ -10,13 +10,13 @@
       hx-target="#settings_response"
       hx-swap="innerHTML"
       >
-      <label for="display_name">DISPLAY NAME</label>
+      <label for="email_update">UPDATE EMAIL</label>
       <input
 	type="text"
-	id="display_name"
-	name="display_name"
+	id="email_update"
+	name="email_update"
 	autocomplete="on"
-	placeholder="DISPLAY NAME"
+	placeholder="NEW EMAIL"
 	>
       <label for="new_password">NEW PASSWORD:</label>
       <input
@@ -44,7 +44,7 @@
       <button type="submit">SUBMIT</button>
     </form>
   </div>
-  <div id="settings_response"></div>
+  <div id="settings_response">response here</div>
   
 
 {% call super() %} {% endblock %}

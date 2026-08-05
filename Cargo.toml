@@ -73,9 +73,12 @@ config = "0.15.23"
 chrono = { version = "0.4.45", features = ["serde"] }
 actix-multipart = { version = "0.8.0", features = ["derive"] }
 bson = { version = "3.1.0", features = ["chrono-0_4", "serde"] }
+anyhow = "1.0.104"
+rstest = { version = "0.24.0", features = ["async-timeout"] }
 
 [dev-dependencies]
 rstest = "0.24.0"
 tokio = { version = "1.43.0", features = ["full"] }
 dotenvy = "0.15.7"
+async-std = "1.13.2"
 

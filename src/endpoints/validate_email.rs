@@ -19,7 +19,8 @@ pub async fn validate_email(email: web::Query<HashMap<String, String>>) -> HttpR
                 tracing::warn!("Checking the email text");
                 if email.contains('@') && email.contains('.') {
                     tracing::warn!("Acceptable email format, well done.");
-                    HttpResponse::Ok().json(json!({"valid": true}))
+                    HttpResponse::Ok()
+                        .json(json!({"valid": true, "message": "Email format is valid"}))
                 } else {
                     tracing::error!("Invalid email format, thus a bad request");
                     HttpResponse::Ok()

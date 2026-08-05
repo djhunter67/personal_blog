@@ -44,7 +44,7 @@ pub async fn index(
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
-        let var_name = IndexTemplate::new("Home".to_string(), vec![], String::new(), false);
+        let var_name = IndexTemplate::new(vec![], String::new(), false);
 
         let rendered = var_name.render().expect("Failed to render template");
 
@@ -57,7 +57,16 @@ pub async fn index(
         Ok(id) => id,
         Err(err) => {
             tracing::error!("Unable to validate the user: {err:#?}");
-            return HttpResponse::InternalServerError().json(format!("{err:#?}"));
+            // return HttpResponse::InternalServerError().json(format!("{err:#?}"));
+            let default_template = IndexTemplate {
+                user_email: format!("{err:#?}"),
+                ..Default::default()
+            };
+            let rendered = match default_template.render() {
+                Ok(template) => template,
+                Err(err) => return HttpResponse::InternalServerError().json(format!("{err:#?}")),
+            };
+            return HttpResponse::Ok().body(rendered);
         }
     };
 
@@ -71,7 +80,7 @@ pub async fn index(
     };
 
     tracing::info!("Creating the session key");
-    let session_key = format!("session:{}", session_id);
+    let session_key = format!("session:{session_id}");
 
     tracing::info!("Searching for the session key: {session_key}");
     let user = match redis::cmd("GET")
@@ -91,8 +100,7 @@ pub async fn index(
     match user.clone() {
         None => {
             tracing::warn!("User is not logged in: {user:#?}");
-            let var_name =
-                IndexTemplate::new("Home".to_string(), blog_post, "None".to_string(), false);
+            let var_name = IndexTemplate::new(blog_post, "None".to_string(), false);
 
             let rendered = var_name.render().expect("Failed to render template");
             HttpResponse::Ok().body(rendered)
@@ -143,8 +151,7 @@ pub async fn index(
                 }
             }
 
-            let var_name =
-                IndexTemplate::new("Home".to_string(), blog_post, email.to_string(), true);
+            let var_name = IndexTemplate::new(blog_post, email, true);
 
             let rendered = var_name.render().expect("Failed to render template");
 

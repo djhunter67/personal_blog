@@ -43,7 +43,6 @@ pub async fn logout(
     let _: () = match redis_conn.del::<String, ()>(cache_key) {
         Ok(()) => {
             tracing::info!("Successfully removed the session key");
-            ()
         }
         Err(err) => {
             tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
@@ -53,8 +52,7 @@ pub async fn logout(
         }
     };
 
-    let index_template =
-        IndexTemplate::new("Logged out".to_string(), vec![], "None".to_string(), false);
+    let index_template = IndexTemplate::new(vec![], "None".to_string(), false);
 
     HttpResponse::Ok().body(
         index_template

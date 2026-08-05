@@ -82,17 +82,17 @@
 
 				// flex: 0 0 70%;
 				p {
-				    padding: 1rem;
-				    font-size: 1.2rem;
-				    color: #333;
-				    flex-grow: 1;
-				    text-indent: 5%;
-				    font-weight: 700;
-				    font-size: 2rem;
+					padding: 1rem;
+					font-size: 1.2rem;
+					color: #333;
+					flex-grow: 1;
+					text-indent: 5%;
+					font-weight: 700;
+					font-size: 2rem;
 				}
 
 				h3 {
-				    margin-left: 2rem;
+					margin-left: 2rem;
 				}
 			}
 		}
@@ -110,37 +110,20 @@
 			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 			gap: 1.5rem;
 
-			// &__title {
-			//     background: transparent;
-			//     font-weight: 700;
-			//     font-size: 0.9rem;
-			//     text-transform: uppercase;
-			//     letter-spacing: 0.05em;
-			//     font-family: 'Georgia', serif;
-			//     padding: 1rem;
-			//     text-align: center;
-			// 	/* Serif fonts often feel more "journal-like" */
-				
-			// 	line-height: 2.6;
-			// 	padding-top: 0.22rem;
-			// 	color: #555;
-			// 	border-radius: 0.33rem;
-			// 	margin: 1.2rem 0.2rem;
-			// 	border-bottom: black 1px solid;
-			// 	border-radius: 2rem;
-			// }
 			&__title {
-			    text-align: center;
+				text-align: center;
 			}
 
-			&__body, &__author, &__title {
-			    background: transparent;
-			    background-color: #f9f9f9;
+			&__body,
+			&__author,
+			&__title {
+				background: transparent;
+				background-color: #f9f9f9;
 				resize: vertical;
 				font-family: 'Georgia', serif;
 				/* Serif fonts often feel more "journal-like" */
-				font-size: 2.1rem;
-				line-height: 2.6;
+				font-size: 1.7rem;
+				line-height: 1.6;
 				padding: 0.22rem 0.24rem;
 				color: #333;
 				// outline: 1px solid violet;
@@ -153,34 +136,35 @@
 				border-radius: 1rem;
 
 				&:focus {
-				    border-color: #4a90e2;
-				    background-color: #fff;
-				    box-shadow: 0 0 0 3px rgba(74, 144, 266, 0.2);						
+					border-color: #4a90e2;
+					background-color: #fff;
+					box-shadow: 0 0 0 3px rgba(74, 144, 266, 0.2);
 				}
+
 				&::placeholder {
-				    color: #aaa;
-				    font-style: italic;
+					color: #aaa;
+					font-style: italic;
 				}
 			}
 
 			// &__author {
 			//     background: transparent;
-			    
-				
+
+
 			// }
 
 			button {
-			    color: white;
-			    background-color: coral;
-			    font-weight: 700;
-			    border: none;
-			    border-radius: 2rem;
-			    padding: 2rem;
-			    // margin: 1rem 0;
-			    font-size: 3rem;
-			    cursor: pointer;
-			    transition: background-color 0.2s ease, transform 0.1s ease;
-			    align-self: center;
+				color: white;
+				background-color: coral;
+				font-weight: 700;
+				border: none;
+				border-radius: 2rem;
+				padding: 2rem;
+				// margin: 1rem 0;
+				font-size: 3rem;
+				cursor: pointer;
+				transition: background-color 0.2s ease, transform 0.1s ease;
+				align-self: center;
 			}
 		}
 

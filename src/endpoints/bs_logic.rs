@@ -41,7 +41,10 @@ struct ContactTemplate<'a> {
 
 #[allow(clippy::future_not_send)]
 #[get("/about")]
-pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> HttpResponse {
+pub async fn about(
+    req: HttpRequest,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+) -> HttpResponse {
     tracing::info!("About page loading");
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         cookie.value().to_string()
@@ -53,7 +56,7 @@ pub async fn about(req: HttpRequest, redis: Data<r2d2::Pool<redis::Client>>) -> 
         ));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(&redis) {
+    let mut red_conn = match redis_conf::establish_connection(&redis_client) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to acquire the cache layer connection: {err:#?}");

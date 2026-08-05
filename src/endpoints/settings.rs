@@ -1,9 +1,21 @@
-use std::collections::HashMap;
-
 use actix_multipart::form::{MultipartForm, tempfile::TempFile, text::Text};
-use actix_web::{HttpResponse, get, post, web::Data};
+use actix_web::{HttpRequest, HttpResponse, get, post, web::Data};
+use anyhow::Result;
 use askama::Template;
+use mongodb::{
+    bson::{doc, oid},
+    options::UpdateModifications,
+};
 use tracing::instrument;
+
+use crate::{
+    models::{
+        mongo,
+        redis_conf::{self, authenticated_user_id},
+    },
+    personnel::users,
+    security::validate,
+};
 
 #[derive(Template)]
 #[template(path = "settings.html")]
@@ -15,10 +27,8 @@ struct SettingsTemplate<'a> {
 
 #[derive(Debug, MultipartForm)]
 pub struct UserSettingsChange {
-    #[multipart(rename = "email_input")]
-    pub email: Option<Text<String>>,
-    #[multipart(rename = "current_password")]
-    pub orig_pw: Option<Text<String>>,
+    #[multipart(rename = "email_update")]
+    pub user_email: Option<Text<String>>,
     #[multipart(rename = "new_password")]
     pub new_pw: Option<Text<String>>,
     #[multipart(rename = "new_password_2")]
@@ -27,40 +37,99 @@ pub struct UserSettingsChange {
     pub image: Option<TempFile>,
 }
 
+#[allow(clippy::future_not_send)]
 #[get("/settings")]
 #[instrument(
     name = "User settings",
     level = "info",
-    target = "personal journal web app"
+    target = "Load the settings landing page",
+    skip(req, mongo_client, redis_client)
 )]
-pub async fn settings_template() -> HttpResponse {
-    tracing::info!("Login page loaded");
+pub async fn settings_template(
+    req: HttpRequest,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+) -> HttpResponse {
+    tracing::info!("Settings page loading");
 
-    // Authenticate this endpoint
-    let template = SettingsTemplate {
-        title: "Settings",
-        is_logged_in: true,
-        user_email: "placeholder@email.com",
-    };
+    match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(_oid) => {
+            let session_id = if let Some(cookie) = req.cookie("session_id") {
+                cookie.value().to_string()
+            } else {
+                tracing::error!("User cookie not found: {req:#?}");
+                return HttpResponse::Unauthorized().body(format!(
+                    "No session found: {:#?}",
+                    req.cookies().expect("No cookies found")
+                ));
+            };
 
-    let template = template.render().expect("Login page render error");
+            let mut red_conn = match redis_conf::establish_connection(&redis_client) {
+                Ok(conn) => conn,
+                Err(err) => {
+                    tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Cache layer error: {err:#?}"));
+                }
+            };
 
-    HttpResponse::Ok().body(template)
+            tracing::info!("Creating the session key");
+            let session_key = format!("session:{session_id}");
+
+            tracing::info!("Searching for the session key: {session_key}");
+            let user = match redis::cmd("GET")
+                .arg(&session_key)
+                .query::<Option<String>>(&mut red_conn)
+            {
+                Ok(result) => result,
+                Err(err) => {
+                    tracing::error!("Error accessing the cache layer: {err:#?}");
+                    return HttpResponse::InternalServerError()
+                        .body(format!("Unable to acquire the cache layer: {err:#?}"));
+                }
+            };
+
+            // Authenticate this endpoint
+            let template = SettingsTemplate {
+                title: "Settings",
+                is_logged_in: true,
+                user_email: &user.unwrap_or(String::new()),
+            };
+
+            let template = template.render().expect("Login page render error");
+
+            return HttpResponse::Ok().body(template);
+        }
+        Err(err) => {
+            tracing::error!("User not authorized to change the settings: {err:#?}");
+            return HttpResponse::Unauthorized().json("User cookie expired or user not authorized");
+        }
+    }
 }
 
 /// All input are optional
+#[allow(clippy::future_not_send)]
 #[post("/settings_change")]
 #[instrument(
     name = "User settings change",
     level = "info",
-    target = "personal journal web app",
-    skip(_mongo, _redis, body)
+    target = "Load and process the settings page",
+    skip(mongo_client, redis_client, req, body)
 )]
 pub async fn settings_change(
-    _mongo: Data<mongodb::Client>,
-    _redis: Data<r2d2::Pool<redis::Client>>,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
+    req: HttpRequest,
     MultipartForm(body): MultipartForm<UserSettingsChange>,
 ) -> HttpResponse {
+    let user_oid: oid::ObjectId =
+        match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+            Ok(oid) => oid,
+            Err(err) => {
+                tracing::error!("Unable to authorize the user: {err:#?}");
+                return HttpResponse::Unauthorized().json("User not authorized");
+            }
+        };
     let pw_1 = body.new_pw.as_ref().map(|pw| pw.as_str());
 
     let pw_2 = body.new_pw_2.as_ref().map(|pw| pw.as_str());
@@ -71,42 +140,133 @@ pub async fn settings_change(
             file_name = ?img.file_name,
             content_type = ?img.content_type,
         );
-    } else {
-        tracing::warn!("No image uploaded");
-    }
 
-    // tracing::warn the size of the vector holding the image bytes
-    if let Some(img) = &body.image {
         let img_bytes = img.size / 1024;
         tracing::warn!("Image bytes size: {} MB", img_bytes / 100);
+    } else {
+        tracing::info!("No image uploaded");
     }
 
     if !pw_1.eq(&pw_2) {
-        // return HttpResponse::BadRequest().body("Passwords do not match");
-        return HttpResponse::Ok().body("Passwords do not match");
+        tracing::error!("Passwords do no match");
+        // return HttpResponse::BadRequest().json("Passwords do not match");
+        return HttpResponse::Ok().json("Passwords do not match");
     }
-    // tracing::warn!("Body: {:#?}", body);
 
-    HttpResponse::Ok().json(HashMap::from([
-        (
-            "email",
-            body.email
-                .map(actix_multipart::form::text::Text::into_inner),
-        ),
-        (
-            "orig_pw",
-            body.orig_pw
-                .map(actix_multipart::form::text::Text::into_inner),
-        ),
-        (
-            "new_pw",
-            body.new_pw
-                .map(actix_multipart::form::text::Text::into_inner),
-        ),
-        (
-            "new_pw_2",
-            body.new_pw_2
-                .map(actix_multipart::form::text::Text::into_inner),
-        ),
-    ]))
+    let pw_1 = pw_1.unwrap_or("");
+
+    match update_user_pw(pw_1, &mongo_client, &user_oid).await {
+        Ok(()) => tracing::info!("Password update succeeded"),
+        Err(err) => {
+            tracing::error!("Password update failed{err:#?}");
+
+            return HttpResponse::BadRequest().json(format!("Password update failed: {err}"));
+        }
+    }
+
+    if let Some(new_email) = body.user_email.as_ref().map(|email| email.as_str()) {
+        tracing::info!("Validating the new email: {new_email}");
+        // Validate the email is actually an email
+
+        if validate::email(new_email) {
+            tracing::info!("New email is valid!");
+
+            let _ = update_user_email(new_email, &mongo_client, &user_oid).await;
+        }
+    }
+
+    HttpResponse::Ok().json("Update successful")
+}
+
+#[instrument(
+    name = "User password change",
+    level = "info",
+    target = "Changing user password",
+    skip(pw, mongo_client, user_oid)
+)]
+async fn update_user_pw<'a>(
+    pw: &str,
+    mongo_client: &Data<mongodb::Client>,
+    user_oid: &oid::ObjectId,
+) -> Result<()> {
+    let mongo_conn = mongo::establish_connection(mongo_client).await?;
+
+    let filter = doc! {
+    "_id": user_oid,
+    };
+
+    let mut user: users::Users = if let Some(user) = mongo_conn
+        .collection::<users::Users>("Users")
+        .find_one(filter)
+        .await?
+    {
+        user
+    } else {
+        tracing::error!("No user found when attempting to update the password");
+        return Err(anyhow::Error::msg(
+            "Unable to procure the user to update the password",
+        ));
+    };
+
+    // let hash_pw: String = PassWorder::new(pw).encrypt().salt().pepper().to_string();
+
+    tracing::info!("Upadating the user password");
+    // Save the users::Users struct to the database to commit
+    user.set_pw(pw);
+
+    tracing::warn!("The new hashed pw: {}", user.get_pw());
+
+    Ok(())
+}
+
+#[instrument(
+    name = "User email change",
+    level = "info",
+    target = "Changing user email",
+    skip(user_email, mongo_client, user_oid)
+)]
+async fn update_user_email(
+    user_email: &str,
+    mongo_client: &Data<mongodb::Client>,
+    user_oid: &oid::ObjectId,
+) -> Result<()> {
+    let mongo_conn = mongo::establish_connection(mongo_client).await?;
+
+    let filter = doc! {
+    "_id": user_oid,
+    };
+
+    let mut user: users::Users = if let Some(user) = mongo_conn
+        .collection::<users::Users>("Users")
+        .find_one(filter.clone())
+        .await?
+    {
+        user
+    } else {
+        tracing::error!("No user found when attempting to update the password");
+        return Err(anyhow::Error::msg(
+            "Unable to procure the user to update the password",
+        ));
+    };
+
+    user.set_email(user_email);
+
+    mongo_conn
+        .collection::<users::Users>("Users")
+        .update_one(filter, user)
+        .await?;
+
+    // tracing::warn!("The new user email: {}", user.get_email());
+
+    Ok(())
+}
+
+impl From<users::Users> for UpdateModifications {
+    fn from(val: users::Users) -> Self {
+        Self::Document(doc! {
+            "$set": doc! {
+        "email": val.get_email()
+        }
+        })
+    }
 }

@@ -21,17 +21,17 @@ use crate::models::mongo;
 /// # Errors
 ///   - Returns an error if the connection cannot be established
 ///
-/// # Arguments
-///   - `settings` - The settings for the application
-///
-/// # Panics
-///   - Panics if the pool cannot be created
-///
-/// Initialize and return a connection to the ``Redis`` database.
+/// Initialize and return a connection to the Cache Layer
 pub fn establish_connection(
     manager: &r2d2::Pool<redis::Client>,
-) -> Result<PooledConnection<redis::Client>, redis::RedisResult<String>> {
-    Ok(manager.get().expect("No Cache layer available"))
+) -> anyhow::Result<PooledConnection<redis::Client>> {
+    match manager.get() {
+        Ok(conn) => Ok(conn),
+        Err(err) => {
+            tracing::error!("Unable to acquire the cache layer: {err:#?}");
+            Err(anyhow::Error::msg("Unable to acquire the cache layer"))
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -103,18 +103,17 @@ pub async fn authenticated_user_id(
 
             tracing::info!("Checking that the db user data is valid: {user_doc:?}");
 
-            if let Some(user_doc) = user_doc {
-                if let Ok(user_id) = user_doc.get_object_id("_id") {
-                    tracing::warn!("User ID found in MongoDB: {user_id}");
-                    return Ok(user_id);
-                }
+            if let Some(user_doc) = user_doc
+                && let Ok(user_id) = user_doc.get_object_id("_id")
+            {
+                tracing::warn!("User ID found in MongoDB: {user_id}");
+                return Ok(user_id);
             }
 
             tracing::error!(
-                "No user data associated with the received session key: {}",
-                user_session.to_string()
+                "No user data associated with the received session key: {user_session}",
             );
-            Err(AuthenticationError::InvalidSession)?
+            Err(AuthenticationError::MissingSession)?
         }
         Some(user_bson_oid) => {
             tracing::warn!(

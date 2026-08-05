@@ -6,15 +6,13 @@ use askama::Template;
 use redis::Commands;
 use uuid::Uuid;
 
-use crate::endpoints::login::LoginTemplate;
-
-use super::login::LoginChecker;
+use crate::{endpoints::login::LoginTemplate, personnel::users};
 
 /// # Panics
 ///
 /// If the cookie cannot be built, the function will panic.
 pub async fn create_session(
-    user: &LoginChecker,
+    user: &users::Users,
     mut redis: r2d2::PooledConnection<redis::Client>,
 ) -> HttpResponse {
     tracing::info!("Generating the cookie");
@@ -60,10 +58,7 @@ mod tests {
     use redis::Commands;
     use rstest::{fixture, rstest};
 
-    use crate::{
-        security::{login::LoginChecker, session::create_session},
-        settings,
-    };
+    use crate::{personnel::users, security::session::create_session, settings};
 
     #[fixture]
     fn get_local_redis_connection() -> redis::Client {
@@ -82,7 +77,11 @@ mod tests {
             .unwrap();
 
         let email = "test_email@example.com";
-        let user: LoginChecker = LoginChecker::new(email.to_string(), "test_password".to_string());
+        let user: users::Users = users::Users::new(
+            email.to_string(),
+            "test_password".to_string(),
+            String::new(),
+        );
 
         let resp = create_session(&user, conn).await;
 
@@ -100,9 +99,10 @@ mod tests {
     #[actix_web::test]
     async fn test_create_session_stores_in_redis(get_local_redis_connection: redis::Client) {
         let mut conn = get_local_redis_connection.get_connection().unwrap();
-        let user: LoginChecker = LoginChecker::new(
+        let user: users::Users = users::Users::new(
             "some_email@example.com".to_string(),
             "some_password".to_string(),
+            String::new(),
         );
 
         let session_id = create_session(
@@ -130,9 +130,10 @@ mod tests {
     async fn test_create_session_has_ttl(get_local_redis_connection: redis::Client) {
         let mut conn = get_local_redis_connection.get_connection().unwrap();
 
-        let user: LoginChecker = LoginChecker::new(
+        let user: users::Users = users::Users::new(
             "the_email@example.com".to_string(),
             "some_password".to_string(),
+            String::new(),
         );
 
         let resp = create_session(

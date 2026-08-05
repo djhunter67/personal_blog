@@ -1,13 +1,25 @@
+use std::fmt::Display;
+
 use base64::{Engine, engine::general_purpose};
-use chacha20::{ChaCha20, KeyIvInit, cipher::StreamCipher};
+use chacha20::{ChaCha20, ChaCha20Rng, KeyIvInit, cipher::StreamCipher};
+use rand::{Rng, SeedableRng};
 use tracing::instrument;
 
 use crate::security::PEPPER;
 
 /// Encryption Logic
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PassWorder {
     pw: String,
+}
+
+impl Display for PassWorder {
+    // fn to_string(&self) -> String {
+    //     self.pw.clone()
+    // }
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.pw)
+    }
 }
 
 impl PassWorder {
@@ -16,10 +28,10 @@ impl PassWorder {
         name = "Password Encryption",
         level = "info",
         target = "sundayLifeServices web app",
-        skip(pw)
+        // skip(pw)
     )]
-    pub fn new(pw: String) -> Self {
-        Self { pw }
+    pub fn new(pw: &str) -> Self {
+        Self { pw: pw.to_string() }
     }
 
     #[instrument(
@@ -38,7 +50,8 @@ impl PassWorder {
         target = "sundayLifeServices web app",
         skip(self)
     )]
-    pub fn encrypt(self) -> Self {
+    #[must_use = "Encrypt plain text passwords"]
+    pub fn encrypt(mut self) -> Self {
         let key: [u8; 32] = *b"an example very very secret key!";
         let nonce: [u8; 12] = *b"unique nonce";
 
@@ -48,14 +61,11 @@ impl PassWorder {
 
         encryptor.apply_keystream(&mut cipher_text);
 
-        tracing::debug!("Encrypting");
+        tracing::info!("Encrypted");
 
-        // let mut pw = Self::new(hex::encode(&cipher_text));
-
-        // pw.pw.insert(16, '$');
-
-        // pw
-        Self::new(hex::encode(&cipher_text))
+        // tracing::warn!("The generated cipher: {}", hex::encode(&cipher_text));
+        self.pw = hex::encode(&cipher_text);
+        self
     }
 
     #[instrument(
@@ -64,20 +74,26 @@ impl PassWorder {
         target = "sundayLifeServices web app",
         skip(self)
     )]
+    #[must_use = "Salt encrypted passwords"]
     pub fn salt(mut self) -> Self {
-        let _salted = String::from("The salted deal");
         tracing::debug!("Salting");
+        let seed: [u8; 32] = [42u8; 32];
 
-        let random_salt: [u8; 16] = rand::random();
+        // let random_salt: [u8; 16] = rand::random();
 
-        // self.pw += &String::from_utf8_lossy(&random_salt);
+        let mut random_salt: [u8; 16] = [0; 16];
+
+        let mut seed_core: ChaCha20Rng = ChaCha20Rng::from_seed(seed);
+
+        seed_core.fill_bytes(&mut random_salt);
 
         self.pw
-            .insert_str(0, &format!("{}$", &hex::encode(random_salt)));
+            .insert_str(0, &format!("{}$", hex::encode(random_salt)));
+        tracing::info!("Salted");
 
-        // info!("The generated Salt: {}", hex::encode(random_salt));
+        // tracing::warn!("The generated Salt: {}", hex::encode(random_salt));
 
-        Self::new(self.pw)
+        self
     }
 
     #[instrument(
@@ -86,27 +102,17 @@ impl PassWorder {
         target = "sundayLifeServices web app",
         skip(self)
     )]
+    #[must_use = "To pepper encrypted and salted passwords"]
     pub fn pepper(mut self) -> Self {
         // self.pw += "the_pepper";
 
         let base_64_pepper = general_purpose::STANDARD.encode(PEPPER);
 
         self.pw += &String::from_utf8_lossy(base_64_pepper.as_bytes());
-        // info!("The Peppered PW: {}", self.pw);
-        Self::new(self.pw)
+        // tracing::warn!("The Peppered PW: {}", self.pw);
+        tracing::info!("Peppered");
+        self
     }
-
-    // #[instrument(
-    //     name = "Create Hash",
-    //     level = "info",
-    //     target = "sundayLifeServices web app",
-    //     skip(self)
-    // )]
-    // pub async fn create_hash(mut self) -> String {
-    //     let new_hash = self.pw.clone()
-
-    //     String::new()
-    // }
 
     #[instrument(
         name = "Password deconstructor",
@@ -115,7 +121,14 @@ impl PassWorder {
         skip(self)
     )]
     pub fn deconstruct(&self) -> (String, String, String) {
-        let (salt, hash) = self.pw.split_once('$').expect("No split delimeter found");
+        // tracing::warn!("the PW to deconstruct: {}", self.pw);
+        let (salt, hash) = if let Some((salt, hash)) = self.pw.split_once('$') {
+            (salt, hash)
+        } else {
+            tracing::error!("No split delimeter found in the pw string");
+            tracing::warn!("Passing back empty results");
+            ("", "")
+        };
 
         match general_purpose::STANDARD.decode(
             self.pw

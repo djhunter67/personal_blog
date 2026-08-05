@@ -14,6 +14,7 @@ use crate::{
         mongo::{self},
         redis_conf,
     },
+    personnel::users::Users,
     security::passworder::PassWorder,
     settings,
 };
@@ -37,13 +38,6 @@ pub struct RegisterUser {
     pub password: String,
     #[serde(rename = "password_2_input")]
     password_2: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct RegistrationData {
-    email: String,
-    password_hash: String,
-    password_salt: String,
 }
 
 #[get("/register")]
@@ -104,8 +98,7 @@ pub async fn register_user(
         }
     };
 
-    let db: mongodb::Collection<RegistrationData> = match mongo::establish_connection(&mongo).await
-    {
+    let db: mongodb::Collection<Users> = match mongo::establish_connection(&mongo).await {
         Ok(db) => db,
         Err(err) => {
             tracing::error!("Unable to procure the database: {err:#?}");
@@ -124,7 +117,7 @@ pub async fn register_user(
         .await
         .expect("");
 
-    let result: Option<RegistrationData> = existing_query
+    let result: Option<Users> = existing_query
         .try_next()
         .await
         .expect("no registered data found");
@@ -135,20 +128,13 @@ pub async fn register_user(
     }
     tracing::info!("Email checking and no matching email found");
 
-    let encrypted_pw: PassWorder = PassWorder::new(password.to_string())
-        .encrypt()
-        .salt()
-        .pepper();
+    let encrypted_pw: PassWorder = PassWorder::new(password).encrypt().salt(); //.pepper();
 
-    let (salt, pw, _) = encrypted_pw.deconstruct();
+    let (salt, _pw, _pepper) = encrypted_pw.deconstruct();
 
     // Save the user to the database
     let result_oid = db
-        .insert_one(&RegistrationData {
-            email: email.clone(),
-            password_hash: pw,
-            password_salt: salt,
-        })
+        .insert_one(Users::new(email.clone(), encrypted_pw.to_string(), salt))
         .await;
 
     match result_oid {
