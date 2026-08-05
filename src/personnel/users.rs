@@ -104,6 +104,7 @@ impl Users {
         // }
 
         // let pw = db_user.get_pw();
+
         tracing::info!(
             "The pw's match: {} -> \npassed_in: {}\ndb_user: {}",
             encrypted_pw == db_user.password_hash,
