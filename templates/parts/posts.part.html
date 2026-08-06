@@ -12,6 +12,14 @@
       <h3>
 	{{ card.get_date() }} --> User ID: {{ card.get_user_id() }}
       </h3>
+      <button
+	hx-post="/v1/submit_text"
+	hx-target="#template_pages"
+	hx-swap="outerHTML"
+	hx-vals='{"title": "{{card.get_title()}}", "body": "{{card.get_body()}}", "author": "{{card.get_author()}}"}'
+	type="button"
+	>EDIT
+      </button>
     </div>
   </div>
   {% endfor %}

@@ -22,15 +22,11 @@ use crate::settings;
 /// # Errors
 ///  - `mongodb::error::Error` if the connection pool could not be created
 /// # Panics
-///  - If the connection pool could not be created
-pub async fn establish_connection(
-    manager: &mongodb::Client,
-) -> Result<mongodb::Database, mongodb::error::Error> {
+///  - If the connection application settings are unavaible
+pub async fn establish_connection(manager: &mongodb::Client) -> anyhow::Result<mongodb::Database> {
     info!("Get mongo connection pool");
-    Ok(manager.database(&settings::get().expect("setings error").mongo.db))
-    // .into_inner()
-    // .database(&settings.db)
-    // .collection(&settings.collection)
+    let settings = settings::get().expect("Application settings are unavailable");
+    Ok(manager.database(&settings.mongo.db))
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -17,11 +17,10 @@ use crate::{
 
 /// All things login that need to be handled for the ``SundayLife`` services website.
 
-#[derive(Template)]
+#[derive(Template, Default)]
 #[template(path = "login.html")]
 pub struct LoginTemplate<'a> {
     pub title: &'a str,
-    pub content: Vec<&'a str>,
     pub is_logged_in: bool,
     pub user_email: &'a str,
 }
@@ -53,14 +52,7 @@ pub struct LoginUser {
 pub async fn login_template() -> HttpResponse {
     debug!("Login page loaded");
 
-    let user_login: &str = "user_email";
-    let user_password: &str = "super_duper_secret_password";
-    let template = LoginTemplate {
-        title: "Login",
-        content: [user_login, user_password].to_vec(),
-        is_logged_in: false,
-        user_email: user_login,
-    };
+    let template = LoginTemplate::default();
 
     let template = template.render().expect("Login page render error");
 

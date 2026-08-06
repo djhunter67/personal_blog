@@ -161,7 +161,7 @@ impl Users {
         let oid: mongodb::bson::oid::ObjectId =
             serde_json::from_str::<mongodb::bson::oid::ObjectId>(&user_oid)?;
 
-        tracing::warn!("The oid found: {oid}");
+        tracing::warn!("The oid found in the cache-layer: {oid}");
 
         // Compare the password saved and the password entered
         let filter = mongodb::bson::doc! {

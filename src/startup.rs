@@ -1,11 +1,10 @@
 use crate::endpoints::{
     self, health, index, login, logout, register, settings, templates, user_input, validate_email,
 };
-use crate::models::r2d2_mongodb::client_manager::MongoClientManager;
 use crate::settings::Settings;
 use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer, http::KeepAlive, middleware};
-use r2d2::ManageConnection;
+use mongodb::options::ClientOptions;
 use std::net;
 use std::time::Duration;
 use tracing::{instrument, warn};
@@ -44,16 +43,27 @@ async fn run(
         }
     };
 
-    let mongo_pool: MongoClientManager =
-        match MongoClientManager::from_uri(&settings.mongo.uri).await {
-            Ok(conn) => conn,
-            Err(err) => {
-                tracing::error!("Unable to connect to the database: {err:#?}");
-                panic!("Application cannot start: {err:#?}")
-            }
-        };
+    let mongo_options: ClientOptions = match ClientOptions::parse(&settings.mongo.uri).await {
+        Ok(mut conn) => {
+            let mongo_settings = settings.mongo;
 
-    let mongo_pool: mongodb::Client = match mongo_pool.connect() {
+            conn.connect_timeout = Some(Duration::from_secs(
+                mongo_settings.connection_timeout.into(),
+            ));
+            conn.server_selection_timeout = Some(Duration::from_secs(4));
+            conn.app_name = Some(mongo_settings.db);
+            conn
+        }
+        Err(err) => {
+            tracing::error!("Unable to connect to the database: {err:#?}",);
+            // panic!("Application cannot start: {err:#?}")
+            ClientOptions::parse("mongodb://localhost:27017")
+                .await
+                .expect("Unable to procure the database")
+        }
+    };
+
+    let mongo_pool: mongodb::Client = match mongodb::Client::with_options(mongo_options) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to connect to the database: {err:#?}");

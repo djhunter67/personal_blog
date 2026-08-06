@@ -13,12 +13,11 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::{JournalPostEdit, JournalPostEditor},
+    endpoints::templates::{IndexTemplate, JournalPostEdit, JournalPostEditor},
     models::{
         mongo::{self, JournalDraft},
         redis_conf::{self, authenticated_user_id},
     },
-    settings,
 };
 
 /// # TODO
@@ -92,7 +91,7 @@ impl BlogPost {
     /// # Error
     ///
     /// - If the date is not in a valid format, it will return an empty string
-    /// # Panic
+    /// # Panics
     ///
     /// - If the time is not in a valid format, it will panic
     /// - if the format passed in is not a valid ``BsonDatetime`` instance
@@ -103,10 +102,7 @@ impl BlogPost {
         let unreadable_date = &self.date.to_string();
         let (month_date_year, time) = unreadable_date.split_once(' ').unwrap_or(("", ""));
 
-        let month_and_day = month_date_year
-            .split_once('-')
-            .map(|(_, m)| m)
-            .unwrap_or("");
+        let month_and_day = month_date_year.split_once('-').map_or("", |(_, m)| m);
 
         let mut month = month_and_day.split('-').next().unwrap_or("");
 
@@ -125,7 +121,7 @@ impl BlogPost {
             ("12", "DEC"),
         ];
 
-        for (m, m_str) in month_map.iter() {
+        for (m, m_str) in &month_map {
             if month == *m {
                 // tracing::info!("Month: {}", m_str);
                 month = m_str;
@@ -135,43 +131,32 @@ impl BlogPost {
 
         // tracing::info!("Month: {}", month);
 
-        let year = month_date_year
-            .split_once('-')
-            .map(|(y, _)| y)
-            .unwrap_or("");
+        let year = month_date_year.split_once('-').map_or("", |(y, _)| y);
         // tracing::info!("Year: {}", year);
-        let day = month_date_year
-            .split_once('-')
-            .map(|(_, d)| d)
-            .unwrap_or("");
+        let day = month_date_year.split_once('-').map_or("", |(_, d)| d);
         // tracing::info!("Day: {}", day);
 
         let mut time = time
             .split_once('.')
-            .map(|(t, _)| t)
-            .unwrap_or("")
+            .map_or("", |(t, _)| t)
             .rsplit_once(':')
-            .map(|(h, _m)| format!("{}HRS", h))
-            .unwrap_or_else(|| time.to_string());
+            .map_or_else(|| time.to_string(), |(h, _m)| format!("{h}HRS"));
 
         // tracing::info!("Zulu Time: {}", time);
 
         // reduce the time by four hours to account for EST time zone
-        if let Some((h, m)) = time
-            .split_once('H')
-            .expect("Time conversion failure")
-            .0
-            .split_once(':')
-        {
-            if let Ok(h) = h.parse::<i32>() {
+        match time.split_once('H').unwrap_or_default().0.split_once(':') {
+            Some((h, m)) if let Ok(h) = h.parse::<i32>() => {
                 let h = h - 4; // (h - 4).rem_euclid(24);
                 time = format!("{h}:{m}HRS");
             }
+            Some(_) => todo!(),
+            None => todo!(),
         }
 
         // tracing::info!("EST Time: {}", time);
 
-        format!("{}-{}-{} {} EST", year, month, day, time)
+        format!("{year}-{month}-{day} {time} EST")
     }
 
     #[must_use]
@@ -179,7 +164,7 @@ impl BlogPost {
         &self.user_id
     }
 
-    pub fn set_user_id(&mut self, user_id: String) -> () {
+    pub fn set_user_id(&mut self, user_id: String) {
         self.user_id = user_id;
     }
 
@@ -354,7 +339,8 @@ pub async fn submit_text(
     tracing::warn!("Reusing the passed in  BlogPost instance: {input:#?}");
 
     match journal_entries.insert_one(&input).await {
-        Ok(_) => {
+        Ok(oid) => {
+            tracing::warn!("The insert result: {oid:#?}");
             // tracing::info!("Inserting a new journal entry");
             // if let Err(err) = drafts
             //     .delete_one(doc! {
@@ -406,16 +392,22 @@ pub async fn submit_text(
 /// - Returns `HttpResponse::InternalServerError` if there is an issue connecting to the database or retrieving the journal entry.
 /// - Returns `HttpResponse::NotFound` if no journal entry is found for the authenticated user.
 #[allow(clippy::future_not_send)]
+#[instrument(
+    name = "User edits text",
+    level = "info",
+    target = "Edit the Blog Post",
+    skip(req, mongo_client, redis_client, input)
+)]
 #[post("/edit_submission")]
 pub async fn edit_submission(
-    reids_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<r2d2::Pool<redis::Client>>,
     mongo_client: Data<mongodb::Client>,
     Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
 ) -> HttpResponse {
     tracing::info!("Edit submission endpoint");
 
-    let user_oid = match authenticated_user_id(&req, &mongo_client, &reids_client).await {
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
         Ok(user_oid) => user_oid,
         Err(err) => {
             tracing::error!(?err, "Unable to authenticate the user");
@@ -446,6 +438,12 @@ pub async fn edit_submission(
 
 /// Update the text of the most recently posted journal entry for the authenticated user.
 #[allow(clippy::future_not_send)]
+#[instrument(
+    name = "User updates a previously submitted text",
+    level = "info",
+    target = "Upadte Blog Post",
+    skip(req, mongo_client, redis_client, input)
+)]
 #[post("/update_text")]
 pub async fn update_text(
     req: HttpRequest,
@@ -560,6 +558,12 @@ pub async fn update_text(
 /// Delete the most immediately posted post from the user
 // #[authenticate] // injects a variable `user_oid` into the request extensions
 #[allow(clippy::future_not_send)]
+#[instrument(
+    name = "User Deletes a submitted blog",
+    level = "info",
+    target = "Delete Submission",
+    skip(req, mongo_client, redis_client)
+)]
 #[delete("/delete_submission")]
 pub async fn delete_submission(
     req: HttpRequest,
@@ -586,19 +590,28 @@ pub async fn delete_submission(
     .collection::<BlogPost>("BlogPosts");
 
     let filter = doc! {
-        "$query": {
-            "user_id": user_oid.to_string()
-    },
-        "$orderby": {
-            "date": -1
-        },
-        "$limit": 1
+    "user_id": user_oid.to_string()
+    };
+    let sort = doc! {
+    "date": -1
     };
 
-    match journal_entries.delete_one(filter).await {
+    match journal_entries.find_one_and_delete(filter).sort(sort).await {
         Ok(deleted_entry) => {
-            tracing::info!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
-            HttpResponse::Ok().json("Journal entry deleted successfully")
+            tracing::warn!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
+            let index_template = IndexTemplate::new(vec![], "user_email", true);
+
+            let render = match index_template.render() {
+                Ok(render) => render,
+                Err(err) => {
+                    tracing::error!("Unable to render the index page after deleting a post");
+                    // Make this an InternalServerError
+                    return HttpResponse::Ok().json(format!(
+                        "Unable to render the Index page after deleting a post: {err:#?}"
+                    ));
+                }
+            };
+            HttpResponse::Ok().body(render)
         }
         Err(err) => {
             tracing::error!(?err, %user_oid, "Unable to delete the journal entry");
@@ -637,16 +650,9 @@ pub fn validate_user(
     };
 
     tracing::info!("Creating the session key");
-    let session_key = format!(
-        "{}{}",
-        &settings::get()
-            .expect("Unable to procure the app settings")
-            .redis
-            .key,
-        session_id
-    );
+    let session_key = format!("session:{session_id}");
 
-    tracing::warn!("The session key: {session_key}");
+    tracing::warn!("The cache-layer's session key: {session_key}");
 
     tracing::info!("Searching for the session key: {session_key}");
     let user = match redis::cmd("GET")
@@ -798,16 +804,16 @@ pub fn validate_user(
 pub async fn find_active_draft(
     mongo: &mongodb::Client,
     user_id: mongodb::bson::oid::ObjectId,
-) -> mongodb::error::Result<Option<JournalDraft>> {
+) -> anyhow::Result<Option<JournalDraft>> {
     let drafts = mongo::establish_connection(mongo)
         .await?
         .collection::<JournalDraft>("journal_drafts");
 
-    drafts
+    Ok(drafts
         .find_one(doc! {
-        "user_id": user_id
+            "user_id": user_id
         })
-        .await
+        .await?)
 }
 
 // #[allow(clippy::future_not_send)]

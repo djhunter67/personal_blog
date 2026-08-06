@@ -23,12 +23,12 @@ pub struct IndexTemplate {
 impl IndexTemplate {
     /// Creates a new [`IndexTemplate`].
     #[must_use]
-    pub fn new(content: Vec<BlogPost>, user_email: String, is_logged_in: bool) -> Self {
+    pub fn new(content: Vec<BlogPost>, user_email: &str, is_logged_in: bool) -> Self {
         Self {
             title: String::from("Home"),
             content,
             version: env!("CARGO_PKG_VERSION").to_string(),
-            user_email,
+            user_email: String::from(user_email),
             is_logged_in,
         }
     }

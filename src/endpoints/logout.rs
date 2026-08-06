@@ -52,7 +52,7 @@ pub async fn logout(
         }
     };
 
-    let index_template = IndexTemplate::new(vec![], "None".to_string(), false);
+    let index_template = IndexTemplate::new(vec![], "None", false);
 
     HttpResponse::Ok().body(
         index_template

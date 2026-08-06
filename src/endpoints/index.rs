@@ -44,7 +44,7 @@ pub async fn index(
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
-        let var_name = IndexTemplate::new(vec![], String::new(), false);
+        let var_name = IndexTemplate::new(vec![], "", false);
 
         let rendered = var_name.render().expect("Failed to render template");
 
@@ -79,7 +79,7 @@ pub async fn index(
         }
     };
 
-    tracing::info!("Creating the session key");
+    tracing::info!("Creating the cache-layer session key");
     let session_key = format!("session:{session_id}");
 
     tracing::info!("Searching for the session key: {session_key}");
@@ -100,7 +100,7 @@ pub async fn index(
     match user.clone() {
         None => {
             tracing::warn!("User is not logged in: {user:#?}");
-            let var_name = IndexTemplate::new(blog_post, "None".to_string(), false);
+            let var_name = IndexTemplate::new(blog_post, "None", false);
 
             let rendered = var_name.render().expect("Failed to render template");
             HttpResponse::Ok().body(rendered)
@@ -151,7 +151,7 @@ pub async fn index(
                 }
             }
 
-            let var_name = IndexTemplate::new(blog_post, email, true);
+            let var_name = IndexTemplate::new(blog_post, &email, true);
 
             let rendered = var_name.render().expect("Failed to render template");
 
