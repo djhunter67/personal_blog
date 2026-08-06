@@ -1,8 +1,7 @@
 /// Business logic lives here
 use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
 use askama::Template;
-
-use crate::models::redis_conf::{self};
+use redis::{AsyncCommands, aio};
 
 #[derive(Template)]
 #[template(path = "parts/about.part.html")]
@@ -41,10 +40,7 @@ struct ContactTemplate<'a> {
 
 #[allow(clippy::future_not_send)]
 #[get("/about")]
-pub async fn about(
-    req: HttpRequest,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
-) -> HttpResponse {
+pub async fn about(req: HttpRequest, redis_client: Data<aio::ConnectionManager>) -> HttpResponse {
     tracing::info!("About page loading");
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         cookie.value().to_string()
@@ -56,23 +52,11 @@ pub async fn about(
         ));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(&redis_client) {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
-            return HttpResponse::InternalServerError()
-                .body(format!("Cache layer error: {err:#?}"));
-        }
-    };
-
     tracing::info!("Creating the session key");
-    let session_key = format!("session:{}", session_id);
+    let session_key = format!("session:{session_id}");
 
     tracing::info!("Searching for the session key: {session_key}");
-    let user = match redis::cmd("GET")
-        .arg(&session_key)
-        .query::<Option<String>>(&mut red_conn)
-    {
+    let user: Option<String> = match redis_client.as_ref().clone().get(&session_key).await {
         Ok(result) => result,
         Err(err) => {
             tracing::error!("Error accessing the cache layer: {err:#?}");

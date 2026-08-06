@@ -9,6 +9,7 @@ use mongodb::{
     bson::{DateTime as BsonDateTime, doc},
     options::{FindOneAndUpdateOptions, ReturnDocument},
 };
+use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -16,7 +17,7 @@ use crate::{
     endpoints::templates::{IndexTemplate, JournalPostEdit, JournalPostEditor},
     models::{
         mongo::{self, JournalDraft},
-        redis_conf::{self, authenticated_user_id},
+        redis_conf::authenticated_user_id,
     },
 };
 
@@ -294,7 +295,7 @@ impl Display for JournalDraftInput {
 #[post("/submit_text")]
 pub async fn submit_text(
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
 ) -> HttpResponse {
@@ -400,7 +401,7 @@ pub async fn submit_text(
 )]
 #[post("/edit_submission")]
 pub async fn edit_submission(
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     mongo_client: Data<mongodb::Client>,
     Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
@@ -448,7 +449,7 @@ pub async fn edit_submission(
 pub async fn update_text(
     req: HttpRequest,
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     Form(input): web::Form<JournalDraftInput>,
 ) -> HttpResponse {
     tracing::info!("Update text endpoint");
@@ -568,7 +569,7 @@ pub async fn update_text(
 pub async fn delete_submission(
     req: HttpRequest,
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
 ) -> HttpResponse {
     tracing::info!("Delete submission endpoint");
 
@@ -624,9 +625,9 @@ pub async fn delete_submission(
 ///   If the user is not logged in, return an "`HttpResponse::Unauthorized`" error.
 /// # Panics
 ///   If the "`redis`" connection pool is not available, the function will panic.
-pub fn validate_user(
+pub async fn validate_user(
     req: &HttpRequest,
-    redis: &Data<r2d2::Pool<redis::Client>>,
+    redis_client: &Data<redis::aio::ConnectionManager>,
 ) -> Result<bool, HttpResponse> {
     let session_id = if let Some(cookie) = req.cookie("session_id") {
         tracing::info!("Cookie found");
@@ -639,15 +640,15 @@ pub fn validate_user(
         )));
     };
 
-    let mut red_conn = match redis_conf::establish_connection(redis) {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
-            return Err(
-                HttpResponse::InternalServerError().body(format!("Cache layer error: {err:#?}"))
-            );
-        }
-    };
+    // let mut red_conn = match redis_client {
+    //     Ok(conn) => conn,
+    //     Err(err) => {
+    //         tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
+    //         return Err(
+    //             HttpResponse::InternalServerError().body(format!("Cache layer error: {err:#?}"))
+    //         );
+    //     }
+    // };
 
     tracing::info!("Creating the session key");
     let session_key = format!("session:{session_id}");
@@ -655,10 +656,7 @@ pub fn validate_user(
     tracing::warn!("The cache-layer's session key: {session_key}");
 
     tracing::info!("Searching for the session key: {session_key}");
-    let user = match redis::cmd("GET")
-        .arg(&session_key)
-        .query::<Option<String>>(&mut red_conn)
-    {
+    let user: String = match redis_client.as_ref().clone().get(session_key).await {
         Ok(result) => result,
         Err(err) => {
             tracing::error!("Error accessing the cache layer: {err:#?}");
@@ -667,7 +665,7 @@ pub fn validate_user(
         }
     };
 
-    if user.is_none() {
+    if user.is_empty() {
         tracing::warn!("User is not logged in: {user:#?}");
         Ok(false)
     } else {
@@ -681,7 +679,7 @@ pub fn validate_user(
 // pub async fn autosave_journal_draft(
 //     req: HttpRequest,
 //     mongo_client: Data<mongodb::Client>,
-//     redis_client: Data<r2d2::Pool<redis::Client>>,
+//     redis_client: Data<aio::ConnectionManager>,
 //     Form(input): Form<JournalDraftInput>,
 // ) -> HttpResponse {
 //     let user_id = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
@@ -821,7 +819,7 @@ pub async fn find_active_draft(
 // pub async fn discard_current_draft(
 //     req: HttpRequest,
 //     mongo_client: Data<mongodb::Client>,
-//     redis_client: Data<r2d2::Pool<redis::Client>>,
+//     redis_client: Data<aio::ConnectionManager>,
 // ) -> HttpResponse {
 //     let user_id = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
 //         Ok(user_id) => user_id,

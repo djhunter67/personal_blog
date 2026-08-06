@@ -6,13 +6,11 @@ use mongodb::{
     bson::{doc, oid},
     options::UpdateModifications,
 };
+use redis::{AsyncCommands, aio};
 use tracing::instrument;
 
 use crate::{
-    models::{
-        mongo,
-        redis_conf::{self, authenticated_user_id},
-    },
+    models::{mongo, redis_conf::authenticated_user_id},
     personnel::users,
     security::validate,
 };
@@ -48,7 +46,7 @@ pub struct UserSettingsChange {
 pub async fn settings_template(
     req: HttpRequest,
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
 ) -> HttpResponse {
     tracing::info!("Settings page loading");
 
@@ -64,23 +62,20 @@ pub async fn settings_template(
                 ));
             };
 
-            let mut red_conn = match redis_conf::establish_connection(&redis_client) {
-                Ok(conn) => conn,
-                Err(err) => {
-                    tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
-                    return HttpResponse::InternalServerError()
-                        .body(format!("Cache layer error: {err:#?}"));
-                }
-            };
+            // let mut red_conn = match redis_conf::establish_connection(&redis_client) {
+            //     Ok(conn) => conn,
+            //     Err(err) => {
+            //         tracing::error!("Unable to acquire the cache layer connection: {err:#?}");
+            //         return HttpResponse::InternalServerError()
+            //             .body(format!("Cache layer error: {err:#?}"));
+            //     }
+            // };
 
             tracing::info!("Creating the session key");
             let session_key = format!("session:{session_id}");
 
             tracing::info!("Searching for the session key: {session_key}");
-            let user = match redis::cmd("GET")
-                .arg(&session_key)
-                .query::<Option<String>>(&mut red_conn)
-            {
+            let user: Option<String> = match redis_client.as_ref().clone().get(session_key).await {
                 Ok(result) => result,
                 Err(err) => {
                     tracing::error!("Error accessing the cache layer: {err:#?}");
@@ -93,7 +88,7 @@ pub async fn settings_template(
             let template = SettingsTemplate {
                 title: "Settings",
                 is_logged_in: true,
-                user_email: &user.unwrap_or(String::new()),
+                user_email: &user.unwrap_or_default(),
             };
 
             let template = template.render().expect("Login page render error");
@@ -118,7 +113,7 @@ pub async fn settings_template(
 )]
 pub async fn settings_change(
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     req: HttpRequest,
     MultipartForm(body): MultipartForm<UserSettingsChange>,
 ) -> HttpResponse {
@@ -184,7 +179,7 @@ pub async fn settings_change(
     target = "Changing user password",
     skip(pw, mongo_client, user_oid)
 )]
-async fn update_user_pw<'a>(
+async fn update_user_pw(
     pw: &str,
     mongo_client: &Data<mongodb::Client>,
     user_oid: &oid::ObjectId,

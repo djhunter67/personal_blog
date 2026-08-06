@@ -5,6 +5,7 @@ use crate::settings::Settings;
 use actix_web::web::{self, Data};
 use actix_web::{App, HttpServer, http::KeepAlive, middleware};
 use mongodb::options::ClientOptions;
+use redis::aio::{self, ConnectionManagerConfig};
 use std::net;
 use std::time::Duration;
 use tracing::{instrument, warn};
@@ -21,7 +22,7 @@ async fn run(
     listener: std::net::TcpListener,
     settings: Settings,
 ) -> Result<actix_web::dev::Server, std::io::Error> {
-    let redis_pool: redis::Client = match redis::Client::open(settings.redis.uri.clone()) {
+    let redis_client: redis::Client = match redis::Client::open(settings.redis.uri.clone()) {
         Ok(conn) => conn,
         Err(err) => {
             tracing::error!("Unable to connect to the cache layer: {err:#?}");
@@ -29,19 +30,21 @@ async fn run(
             // try to connect to a locally running instance of redis
         }
     };
-    let redis_pool: r2d2::Pool<redis::Client> = match r2d2::Pool::builder()
-        .max_size(settings.redis.pool_size)
-        .connection_timeout(Duration::from_secs(
-            settings.redis.pool_timeout_seconds.into(),
-        ))
-        .build(redis_pool)
-    {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Unable to connect to the cache layer: {err:#?}");
-            panic!("Application cannot start: {err:#?}")
-        }
-    };
+
+    let redis_config = ConnectionManagerConfig::new()
+        .set_connection_timeout(Some(Duration::from_secs(2))) // Time to establish TCP connection
+        .set_response_timeout(Some(Duration::from_secs(1))) // Time to wait for command response
+        .set_exponent_base(2.) // Exponential backoff base
+        .set_number_of_retries(3); // Max retries before failing
+
+    let redis_pool: redis::aio::ConnectionManager =
+        match aio::ConnectionManager::new_with_config(redis_client, redis_config).await {
+            Ok(conn) => conn,
+            Err(err) => {
+                tracing::error!("Unable to connect to the cache layer: {err:#?}");
+                panic!("Application cannot start: {err:#?}")
+            }
+        };
 
     let mongo_options: ClientOptions = match ClientOptions::parse(&settings.mongo.uri).await {
         Ok(mut conn) => {

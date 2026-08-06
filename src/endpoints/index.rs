@@ -2,10 +2,7 @@ use std::task::Poll;
 
 use crate::{
     endpoints::user_input::BlogPost,
-    models::{
-        mongo,
-        redis_conf::{self, authenticated_user_id},
-    },
+    models::{mongo, redis_conf::authenticated_user_id},
 };
 
 use super::templates::IndexTemplate;
@@ -19,6 +16,7 @@ use actix_web::{
 };
 use askama::Template;
 use futures::{StreamExt, stream};
+use redis::{AsyncCommands, aio};
 use tracing::instrument;
 
 #[allow(clippy::future_not_send)]
@@ -32,7 +30,7 @@ use tracing::instrument;
 #[get("/")]
 pub async fn index(
     req: HttpRequest,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     mongo_client: Data<mongodb::Client>,
 ) -> HttpResponse {
     tracing::info!("Serving main page");
@@ -70,24 +68,12 @@ pub async fn index(
         }
     };
 
-    let mut red_conn = match redis_conf::establish_connection(&redis_client) {
-        Ok(conn) => conn,
-        Err(err) => {
-            tracing::error!("Unable to acquire the redis connection: {err:#?}");
-            return HttpResponse::InternalServerError()
-                .json(format!("Cache layer error: {err:#?}"));
-        }
-    };
-
     tracing::info!("Creating the cache-layer session key");
     let session_key = format!("session:{session_id}");
 
     tracing::info!("Searching for the session key: {session_key}");
-    let user = match redis::cmd("GET")
-        .arg(&session_key)
-        .query::<Option<String>>(&mut red_conn)
-    {
-        Ok(result) => result,
+    let user: Option<String> = match redis_client.as_ref().clone().get(&session_key).await {
+        Ok(result) => Some(result),
         Err(err) => {
             tracing::error!("Error accessing the cache layer: {err:#?}");
             return HttpResponse::InternalServerError()

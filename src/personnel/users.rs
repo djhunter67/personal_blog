@@ -1,4 +1,4 @@
-use redis::Commands;
+use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -12,11 +12,13 @@ pub struct Users {
 }
 
 impl Users {
-    pub fn new(email: String, password_hash: String, password_salt: String) -> Self {
+    /// Creates a new [`Users`].
+    #[must_use = "Create a new user"]
+    pub const fn new(email: String, password_hash: String, password_salt: String) -> Self {
         Self {
             email,
             password_hash,
-            password_salt,
+            password_salt: String::new(),
         }
     }
 
@@ -128,7 +130,7 @@ impl Users {
     pub async fn pw_verify(
         &self,
         mongo_client: &mongodb::Client,
-        redis_conn: &mut r2d2::PooledConnection<redis::Client>,
+        redis_conn: &mut aio::ConnectionManager,
     ) -> anyhow::Result<bool> {
         tracing::debug!("Verifying the user entered password");
 
@@ -148,7 +150,7 @@ impl Users {
         //     }
         // };
         // Get the user's key from when the user registered
-        let user_oid: String = match redis_conn.get(cache_key) {
+        let user_oid: String = match redis_conn.get(cache_key).await {
             Ok(cached_user) => cached_user,
             Err(err) => {
                 tracing::warn!("No registration keys detected: {err}");

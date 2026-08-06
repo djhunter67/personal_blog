@@ -3,7 +3,7 @@ use actix_web::{
     cookie::{Cookie, time::Duration},
 };
 use askama::Template;
-use redis::Commands;
+use redis::{AsyncCommands, aio};
 use uuid::Uuid;
 
 use crate::{endpoints::login::LoginTemplate, personnel::users};
@@ -13,14 +13,17 @@ use crate::{endpoints::login::LoginTemplate, personnel::users};
 /// If the cookie cannot be built, the function will panic.
 pub async fn create_session(
     user: &users::Users,
-    mut redis: r2d2::PooledConnection<redis::Client>,
+    mut redis_client: aio::ConnectionManager,
 ) -> HttpResponse {
     tracing::info!("Generating the cookie");
     // Generate a cryptographically strong, random session ID
     let session_id = Uuid::new_v4().to_string();
     let session_key = format!("session:{session_id}");
 
-    match redis.set_ex(&session_key, user.get_email(), 86400) {
+    match redis_client
+        .set_ex(&session_key, user.get_email(), 86400)
+        .await
+    {
         Ok(()) => (),
         Err(err) => {
             tracing::error!("Unable to set the session key into the cache layer: {err:#?}");
@@ -53,7 +56,7 @@ pub async fn create_session(
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
-    use redis::Commands;
+    use redis::{AsyncCommands, aio};
     use rstest::{fixture, rstest};
 
     use crate::{personnel::users, security::session::create_session, settings};
@@ -67,12 +70,9 @@ mod tests {
     #[rstest]
     #[actix_web::test]
     async fn test_create_session_sets_cookie(get_local_redis_connection: redis::Client) {
-        let conn = r2d2::Pool::builder()
-            .max_size(15)
-            .build(get_local_redis_connection)
-            .expect("Failed to create Redis connection pool")
-            .get()
-            .unwrap();
+        let conn = aio::ConnectionManager::new(get_local_redis_connection)
+            .await
+            .expect("Failed to create Redis connection pool");
 
         let email = "test_email@example.com";
         let user: users::Users = users::Users::new(
@@ -96,53 +96,43 @@ mod tests {
     #[rstest]
     #[actix_web::test]
     async fn test_create_session_stores_in_redis(get_local_redis_connection: redis::Client) {
-        let mut conn = get_local_redis_connection.get_connection().unwrap();
+        let mut conn = aio::ConnectionManager::new(get_local_redis_connection)
+            .await
+            .expect("Failed to create Redis connection pool");
         let user: users::Users = users::Users::new(
             "some_email@example.com".to_string(),
             "some_password".to_string(),
             String::new(),
         );
 
-        let session_id = create_session(
-            &user,
-            r2d2::Pool::builder()
-                .build(get_local_redis_connection)
-                .unwrap()
-                .get()
-                .unwrap(),
-        )
-        .await
-        .cookies()
-        .find(|cookie| cookie.name() == "session_id")
-        .unwrap()
-        .value()
-        .to_string();
+        let session_id = create_session(&user, conn.clone())
+            .await
+            .cookies()
+            .find(|cookie| cookie.name() == "session_id")
+            .unwrap()
+            .value()
+            .to_string();
 
         let session_key = format!("session:{session_id}");
-        let stored_email: String = conn.get(&session_key).unwrap();
+        let stored_email: String = conn.get(&session_key).await.unwrap();
         assert_eq!(stored_email, user.get_email());
     }
 
     #[rstest]
     #[actix_web::test]
     async fn test_create_session_has_ttl(get_local_redis_connection: redis::Client) {
-        let mut conn = get_local_redis_connection.get_connection().unwrap();
+        // let mut conn = get_local_redis_connection.get_connection().unwrap();
 
+        let mut conn = aio::ConnectionManager::new(get_local_redis_connection)
+            .await
+            .expect("Failed to create Redis connection pool");
         let user: users::Users = users::Users::new(
             "the_email@example.com".to_string(),
             "some_password".to_string(),
             String::new(),
         );
 
-        let resp = create_session(
-            &user,
-            r2d2::Pool::builder()
-                .build(get_local_redis_connection)
-                .unwrap()
-                .get()
-                .unwrap(),
-        )
-        .await;
+        let resp = create_session(&user, conn.clone()).await;
 
         let session_id = resp
             .cookies()
@@ -152,7 +142,7 @@ mod tests {
             .to_string();
 
         let session_key = format!("session:{session_id}");
-        let ttl: i64 = conn.ttl(&session_key).unwrap();
+        let ttl: i64 = conn.ttl(&session_key).await.unwrap();
 
         // Check that the TTL is set (greater than 0 and less than or equal to (86400 seconds / 24 hours))
         assert!(ttl > 0 && ttl <= 86400);

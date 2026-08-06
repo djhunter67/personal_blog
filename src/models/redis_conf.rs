@@ -2,37 +2,12 @@
 
 use actix_web::{HttpRequest, web::Data};
 use mongodb::bson::oid::ObjectId;
-use r2d2::PooledConnection;
 
-use redis::Commands;
+use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::models::mongo;
-
-#[instrument(
-    name = "Establishing a connection to the Redis database",
-    level = "info",
-    skip(manager)
-)]
-/// # Returns
-///   - Returns a connection to the ``Redis`` database
-///
-/// # Errors
-///   - Returns an error if the connection cannot be established
-///
-/// Initialize and return a connection to the Cache Layer
-pub fn establish_connection(
-    manager: &r2d2::Pool<redis::Client>,
-) -> anyhow::Result<PooledConnection<redis::Client>> {
-    match manager.get() {
-        Ok(conn) => Ok(conn),
-        Err(err) => {
-            tracing::error!("Unable to acquire the cache layer: {err:#?}");
-            Err(anyhow::Error::msg("Unable to acquire the cache layer"))
-        }
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserSession {
@@ -61,7 +36,7 @@ pub enum AuthenticationError {
 pub async fn authenticated_user_id(
     req: &HttpRequest,
     mongo_client: &Data<mongodb::Client>,
-    redis_client: &Data<r2d2::Pool<redis::Client>>,
+    redis_client: &Data<aio::ConnectionManager>,
 ) -> Result<ObjectId, AuthenticationError> {
     let session_cookie = req
         .cookie("session_id")
@@ -70,19 +45,25 @@ pub async fn authenticated_user_id(
     let user_session = format!("session:{}", session_cookie.value());
 
     tracing::info!("Establishing the Redis connection");
-    let mut redis_conn =
-        establish_connection(redis_client).map_err(|_| AuthenticationError::Redis)?;
+    // let mut redis_conn =
+    // establish_connection(redis_client).map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Getting the user from the session");
-    let user_email: Option<String> = redis_conn
+    let user_email: Option<String> = redis_client
+        .as_ref()
+        .clone()
         .get(&user_session)
+        .await
         .map_err(|_| AuthenticationError::Redis)?;
 
     tracing::warn!("Checking that the email to check against is valid: {user_email:#?}");
 
     let cache_key = format!("user:auth:{}", user_email.clone().unwrap_or_default());
-    let user_id: Option<String> = redis_conn
+    let user_id: Option<String> = redis_client
+        .as_ref()
+        .clone()
         .get(&cache_key)
+        .await
         .map_err(|_| AuthenticationError::Redis)?;
 
     tracing::info!("Checking that the serialized session is valid: {user_id:#?}");

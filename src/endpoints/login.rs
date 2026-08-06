@@ -3,16 +3,13 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
-use redis::Commands;
+use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 use crate::{
-    endpoints::templates::IndexTemplate,
-    models::{mongo, redis_conf},
-    personnel::users,
-    security::session::create_session,
-    settings,
+    endpoints::templates::IndexTemplate, models::mongo, personnel::users,
+    security::session::create_session, settings,
 };
 
 /// All things login that need to be handled for the ``SundayLife`` services website.
@@ -68,7 +65,7 @@ pub async fn login_template() -> HttpResponse {
 )]
 pub async fn login_user(
     mongo_client: Data<mongodb::Client>,
-    redis_client: Data<r2d2::Pool<redis::Client>>,
+    redis_client: Data<aio::ConnectionManager>,
     body: web::Form<LoginUser>,
 ) -> impl Responder {
     debug!("The user data entered: {:#?}", body.0);
@@ -84,18 +81,18 @@ pub async fn login_user(
     // Check redis first
     tracing::info!("Checking the cache-layer for: {user_email}");
     let cache_key = format!("user:auth:{user_email}");
-    let mut redis_conn: r2d2::PooledConnection<redis::Client> =
-        match redis_conf::establish_connection(&redis_client) {
-            Ok(conn) => conn,
-            Err(err) => {
-                tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
-                return HttpResponse::InternalServerError()
-                    .body(format!("Unable to procure the cache layer: {err:#?}"));
-            }
-        };
+    // let mut redis_conn: r2d2::PooledConnection<redis::Client> =
+    //     match redis_conf::establish_connection(&redis_client) {
+    //         Ok(conn) => conn,
+    //         Err(err) => {
+    //             tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
+    //             return HttpResponse::InternalServerError()
+    //                 .body(format!("Unable to procure the cache layer: {err:#?}"));
+    //         }
+    //     };
 
     // Get the user's key from when the user registered
-    let cached_user: Option<String> = match redis_conn.get(cache_key) {
+    let cached_user: Option<String> = match redis_client.as_ref().clone().get(cache_key).await {
         Ok(cached_user) => Some(cached_user),
         Err(err) => {
             tracing::warn!("No registration keys detected: {err}");
@@ -134,11 +131,13 @@ pub async fn login_user(
         }
     };
 
-    if let Ok(authed) = user_auth.pw_verify(&mongo_client, &mut redis_conn).await
+    if let Ok(authed) = user_auth
+        .pw_verify(&mongo_client, &mut redis_client.as_ref().clone())
+        .await
         && authed
     {
         tracing::warn!("PASSWORD VERIFIED! -> True");
-        return create_session(&user_auth, redis_conn).await;
+        return create_session(&user_auth, redis_client.as_ref().clone()).await;
     }
 
     // THIS RETURN VAL IS TEMPORARY

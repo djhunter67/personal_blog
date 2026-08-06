@@ -5,15 +5,12 @@ use actix_web::{
 use askama::Template;
 use futures::TryStreamExt;
 use mongodb::bson::doc;
-use redis::Commands;
+use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
 
 use crate::{
-    models::{
-        mongo::{self},
-        redis_conf,
-    },
+    models::mongo::{self},
     personnel::users::Users,
     security::passworder::PassWorder,
     settings,
@@ -64,11 +61,11 @@ pub async fn register_template() -> HttpResponse {
     name = "User registration attempted",
     level = "info",
     target = "sundayLifeServices web app",
-    skip(body, mongo, redis)
+    skip(body, mongo_client, redis_client)
 )]
 pub async fn register_user(
-    mongo: Data<mongodb::Client>,
-    redis: Data<r2d2::Pool<redis::Client>>,
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<aio::ConnectionManager>,
     body: web::Form<RegisterUser>,
 ) -> HttpResponse {
     // Validate the user data entered
@@ -98,7 +95,7 @@ pub async fn register_user(
         }
     };
 
-    let db: mongodb::Collection<Users> = match mongo::establish_connection(&mongo).await {
+    let db: mongodb::Collection<Users> = match mongo::establish_connection(&mongo_client).await {
         Ok(db) => db,
         Err(err) => {
             tracing::error!("Unable to procure the database: {err:#?}");
@@ -150,19 +147,13 @@ pub async fn register_user(
             if let Ok(json_data) =
                 serde_json::to_string(&oid.inserted_id.as_object_id().expect("Oid not generated"))
             {
-                let mut redis_conn = match redis_conf::establish_connection(&redis) {
-                    Ok(conn) => conn,
-                    Err(err) => {
-                        tracing::error!("Unable to procure the cache-layer connection: {err:#?}");
-                        return HttpResponse::InternalServerError()
-                            .body(format!("Unable to procure the cache layer: {err:#?}"));
-                    }
-                };
-                // Debug log
                 tracing::warn!("the json data to be saved: {cache_key}{json_data}");
-                // Set the key in Redis
-                // let _: redis::RedisResult<()> = redis_conn.set_ex(&cache_key, json_data, 3600);
-                match redis_conn.set(&cache_key, json_data) {
+                match redis_client
+                    .as_ref()
+                    .clone()
+                    .set(&cache_key, json_data)
+                    .await
+                {
                     // change to 3200 for production
                     Ok(()) => (),
                     Err(err) => tracing::error!("Error saving to the cache layer -> {err:#?}"),
