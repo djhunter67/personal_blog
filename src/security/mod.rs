@@ -120,15 +120,15 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "the_password".to_string());
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let (salt, _pw, _pepper) = encrypted_pw.deconstruct();
 
-        verifier.set_pw(&encrypted_pw.to_string());
+        let verifier: users::Users = users::Users::new(
+            "the_email@email.com".to_string(),
+            encrypted_pw.to_string(),
+            salt,
+        );
 
         let mongo_conn: mongodb::Collection<users::Users> =
             mongo_client.database("personal_blog").collection("Test");
@@ -144,7 +144,7 @@ mod tests {
                 val
             }
             Err(err) => {
-                panic!("{}", format!("{err:#?}"))
+                panic!("{}", format!("PW verifier error: {err:#?}"))
             }
         });
     }
@@ -157,13 +157,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "the_password".to_string());
+        let mut verifier: users::Users = users::Users::new(
+            "the_email".to_string(),
+            "the_password".to_string(),
+            String::new(),
+        );
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -187,13 +187,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "the_password".to_string());
+        let mut verifier: users::Users = users::Users::new(
+            "the_email".to_string(),
+            "the_password".to_string(),
+            String::new(),
+        );
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -223,13 +223,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "the_password".to_string());
+        let mut verifier: users::Users = users::Users::new(
+            "the_email".to_string(),
+            "the_password".to_string(),
+            String::new(),
+        );
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -253,13 +253,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "the_password".to_string());
+        let mut verifier: users::Users = users::Users::new(
+            "the_email".to_string(),
+            "the_password".to_string(),
+            String::new(),
+        );
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -283,13 +283,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users =
-            users::Users::new("the_email".to_string(), "p@$$w0rd!".to_string());
+        let mut verifier: users::Users = users::Users::new(
+            "the_email".to_string(),
+            "p@$$w0rd!".to_string(),
+            String::new(),
+        );
 
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -319,15 +319,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
+
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "a_very_long_password_that_exceeds_normal_length".to_string(),
+            String::new(),
         );
-
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -357,15 +355,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
+
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "   password_with_spaces_and_tabs\t".to_string(),
+            String::new(),
         );
-
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 
@@ -395,15 +391,13 @@ mod tests {
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
+        let encrypted_pw: PassWorder = PassWorder::new("the_passwor").encrypt().salt().pepper();
+
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "   password with spaces and tabs\t".to_string(),
+            String::new(),
         );
-
-        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
-            .encrypt()
-            .salt()
-            .pepper();
 
         verifier.set_pw(&encrypted_pw.to_string());
 

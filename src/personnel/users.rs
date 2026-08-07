@@ -14,11 +14,11 @@ pub struct Users {
 impl Users {
     /// Creates a new [`Users`].
     #[must_use = "Create a new user"]
-    pub const fn new(email: String, password_hash: String) -> Self {
+    pub const fn new(email: String, password_hash: String, password_salt: String) -> Self {
         Self {
             email,
             password_hash,
-            password_salt: String::new(), // Needs to be saved separately because it is unique to each user
+            password_salt, // Accountability for if two or more users have the same password
         }
     }
 
@@ -131,14 +131,9 @@ impl Users {
         &self,
         mongo_client: &mongodb::Client,
         redis_conn: &mut aio::ConnectionManager,
-        #[cfg_attr(test, allow(unused_variables))] test: Option<bool>,
+        test: Option<bool>,
     ) -> anyhow::Result<bool> {
         tracing::debug!("Verifying the user entered password");
-
-        // let encrypted_pw: PassWorder = PassWorder::new(user_pw).encrypt().salt().pepper();
-
-        // let (_salt, pw, _) = encrypted_pw.deconstruct();
-        // tracing::debug!("The decrypted password: {pw}");
 
         let cache_key = format!("user:auth:{}", self.email);
         tracing::warn!("The cache key to use to get the email to verify the user: {cache_key}");
@@ -174,7 +169,7 @@ impl Users {
         let mongo_conn = mongo::establish_connection(mongo_client).await?;
         let user: Self = mongo_conn
             .collection::<Self>(if test.unwrap_or_default() {
-                dbg!("\n\nRunning the TEST database\n\n");
+                eprintln!("\n\nRunning the TEST database\n\n");
                 "Test"
             } else {
                 "Users"

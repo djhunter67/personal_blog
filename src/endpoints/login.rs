@@ -106,7 +106,11 @@ pub async fn login_user(
         // redundant Option to satisfy the compiler
         tracing::warn!("cache-hit: {json_data:#?}");
 
-        let json_result = users::Users::new(String::from(user_email), String::from(password));
+        let json_result = users::Users::new(
+            String::from(user_email),
+            String::from(password),
+            String::new(),
+        );
 
         // json_result.set_pw(&json_result.get_pw());
         json_result
