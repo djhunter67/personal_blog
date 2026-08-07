@@ -95,6 +95,43 @@
 					margin-left: 2rem;
 				}
 			}
+
+			&__buttons {
+			    display: flex;
+			    flex-direction: row;
+			    margin: 1rem;
+			    gap: 1rem;
+			    outline: 1px black dotted;
+			    width: fit-content;
+			    
+
+			    button {
+				background-color: coral;
+				border-radius: 1.2rem;
+				font-size: 2rem;
+			    }
+			    
+			    input[type="file"]::file-selector-button {
+				// Reset browser defaults
+				-webkit-appearance: none;
+				-moz-appearance: none;
+				appearance: none;
+				
+				background-color: #62529c;
+				color: white;
+				border: none;
+				padding: 1rem 3rem;
+				font-size: 2rem;
+				cursor: pointer;
+				border-radius: 2rem;
+				margin: 0 0.2rem;
+				transition: background-color 0.2s ease;
+			    }
+
+			    input[type="file"]::file-selector-button:hover {
+				background-color: #0d45a5;
+			    }
+			}
 		}
 
 		&__journaler {
