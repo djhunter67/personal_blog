@@ -83,11 +83,9 @@ impl Users {
         tracing::debug!("The user passed in for the password comparison: {db_user:#?}");
         // let pw: (_, String, _) = PassWorder::new(db_user.get_pw()).deconstruct();
 
-        let encrypted_pw = passworder::PassWorder::new(&self.get_pw())
-            .encrypt()
-            .salt()
-            .get();
-        // .pepper()
+        let encrypted_pw = passworder::PassWorder::new(&self.get_pw()).encrypt().salt();
+        // .get();
+        // .pepper()  // Cannot pepper until I redo registration
 
         // {
         //     // Troubleshooting block
@@ -105,17 +103,25 @@ impl Users {
         //     tracing::error!("\nPWD: {pw}\nSLT: {salt}\nPEP: {pepper}");
         // }
 
-        // let pw = db_user.get_pw();
+        let db_pw = db_user.get_pw();
+
+        let (_salt, db_pworder, _pepper) = passworder::PassWorder::new(&db_pw).deconstruct();
+
+        let (_salt, passed_in_pw, _pepper) = encrypted_pw.deconstruct();
 
         tracing::info!(
             "The pw's match: {} -> \npassed_in: {}\ndb_user: {}",
-            encrypted_pw == db_user.password_hash,
-            encrypted_pw,
-            db_user.password_hash
+            // encrypted_pw == db_user.password_hash,
+            passed_in_pw == db_pworder,
+            // encrypted_pw,
+            passed_in_pw,
+            // db_user.password_hash
+            db_pworder
         );
 
         // self.password_hash.eq(&db_user.password_hash)
-        encrypted_pw.eq(&db_user.password_hash)
+        // encrypted_pw.eq(&db_user.password_hash)
+        passed_in_pw.eq(&db_pworder)
     }
 
     /// # Errors

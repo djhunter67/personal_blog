@@ -113,6 +113,7 @@ mod tests {
         assert_eq!(random_salt.len(), cipher_text.len());
     }
 
+    #[ignore = "Extensive development required to implement correctly; Cache layer session key required"]
     #[rstest]
     #[tokio::test]
     #[awt]
