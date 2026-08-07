@@ -8,17 +8,15 @@ use crate::{models::mongo, security::passworder};
 pub struct Users {
     email: String,
     password_hash: String,
-    password_salt: String,
 }
 
 impl Users {
     /// Creates a new [`Users`].
     #[must_use = "Create a new user"]
-    pub const fn new(email: String, password_hash: String, password_salt: String) -> Self {
+    pub const fn new(email: String, password_hash: String) -> Self {
         Self {
             email,
             password_hash,
-            password_salt: String::new(),
         }
     }
 
@@ -131,6 +129,7 @@ impl Users {
         &self,
         mongo_client: &mongodb::Client,
         redis_conn: &mut aio::ConnectionManager,
+        #[cfg_attr(test, allow(unused_variables))] test: Option<bool>,
     ) -> anyhow::Result<bool> {
         tracing::debug!("Verifying the user entered password");
 
@@ -172,7 +171,11 @@ impl Users {
 
         let mongo_conn = mongo::establish_connection(mongo_client).await?;
         let user: Self = mongo_conn
-            .collection::<Self>("Users")
+            .collection::<Self>(if test.unwrap_or_default() {
+                "Test"
+            } else {
+                "Users"
+            })
             .find_one(filter)
             .await?
             .unwrap_or_default();

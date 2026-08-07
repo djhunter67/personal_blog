@@ -106,11 +106,7 @@ pub async fn login_user(
         // redundant Option to satisfy the compiler
         tracing::warn!("cache-hit: {json_data:#?}");
 
-        let json_result = users::Users::new(
-            String::from(user_email),
-            String::from(password),
-            String::new(),
-        );
+        let json_result = users::Users::new(String::from(user_email), String::from(password));
 
         // json_result.set_pw(&json_result.get_pw());
         json_result
@@ -132,7 +128,7 @@ pub async fn login_user(
     };
 
     if let Ok(authed) = user_auth
-        .pw_verify(&mongo_client, &mut redis_client.as_ref().clone())
+        .pw_verify(&mongo_client, &mut redis_client.as_ref().clone(), None)
         .await
         && authed
     {

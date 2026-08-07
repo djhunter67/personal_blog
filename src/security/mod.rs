@@ -11,14 +11,12 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use base64::{Engine, engine::general_purpose};
     use chacha20::{ChaCha20, KeyIvInit, cipher::StreamCipher};
+    use redis::aio;
     use rstest::{fixture, rstest};
 
     use crate::{personnel::users, security::passworder::PassWorder};
 
     use super::*;
-
-    #[derive(serde::Deserialize)]
-    struct Test {}
 
     #[fixture]
     async fn mongo_client() -> mongodb::Client {
@@ -28,13 +26,10 @@ mod tests {
     }
 
     #[fixture]
-    fn redis_client() -> r2d2::PooledConnection<redis::Client> {
-        r2d2::Pool::new(
-            redis::Client::open("redis://:secret_passers_redis@10.20.20.202:6379").unwrap(),
-        )
-        .unwrap()
-        .get()
-        .unwrap()
+    async fn redis_client() -> aio::ConnectionManager {
+        let client =
+            redis::Client::open("redis://:secret_passers_redis@10.20.20.202:6379").unwrap();
+        aio::ConnectionManager::new(client).await.unwrap()
     }
 
     #[test]
@@ -46,7 +41,7 @@ mod tests {
 
     #[test]
     fn test_password_peppering() {
-        let mut pw = PassWorder::new("my_secret_password");
+        let pw = PassWorder::new("my_secret_password");
         let peppered_pw = pw.pepper();
         assert!(
             peppered_pw
@@ -86,8 +81,8 @@ mod tests {
 
     #[test]
     fn test_pw_pepper_consistency() {
-        let mut pw1 = PassWorder::new("my_secret_password");
-        let mut pw_2 = PassWorder::new("my_secret_password");
+        let pw1 = PassWorder::new("my_secret_password");
+        let pw_2 = PassWorder::new("my_secret_password");
         let peppered_pw1 = pw1.pepper();
         let peppered_pw2 = pw_2.pepper();
         assert_eq!(peppered_pw1.get(), peppered_pw2.get());
@@ -116,191 +111,235 @@ mod tests {
     }
 
     #[rstest]
+    #[tokio::test]
+    #[awt]
     async fn test_login_checker_verfier(
-        mongo_client: mongodb::Client,
-        redis_client: r2d2::PooledConnection<redis::Client>,
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
     ) {
-        let mut verifier: users::Users = users::Users::new(
-            "the_email".to_string(),
-            "the_password".to_string(),
-            String::new(),
-        );
+        let mut verifier: users::Users =
+            users::Users::new("the_email".to_string(), "the_password".to_string());
 
-        let user_pw = "the_password".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-        let mongo_conn = mongo_client.database("TEST").collection::<Test>("testing");
+        // let mongo_conn: mongodb::Client = mongo_client;
 
         assert!(
             verifier
-                .pw_verify(&mongo_conn, &mut redis_client)
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
                 .await
                 .unwrap()
         );
     }
 
-    #[test]
-    fn test_login_verifier_failure() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_failure(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users =
             users::Users::new("the_email".to_string(), "the_password".to_string());
 
-        let user_pw = "wrong_password".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(!verifier.pw_verify(user_pw));
+        assert!(
+            !verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_login_verifier_with_salt_and_pepper() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_with_salt_and_pepper(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users =
             users::Users::new("the_email".to_string(), "the_password".to_string());
 
-        let user_pw = "the_password".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(verifier.pw_verify(user_pw));
+        assert!(
+            verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_login_verifier_with_incorrect_password() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_with_incorrect_password(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users =
             users::Users::new("the_email".to_string(), "the_password".to_string());
 
-        let user_pw = "incorrect_password".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(!verifier.pw_verify(user_pw));
+        assert!(
+            !verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_login_verifier_with_empty_password() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_with_empty_password(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users =
             users::Users::new("the_email".to_string(), "the_password".to_string());
 
-        let user_pw = String::new();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(!verifier.pw_verify(user_pw));
+        assert!(
+            !verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_login_verifier_with_special_characters() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_with_special_characters(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users =
             users::Users::new("the_email".to_string(), "p@$$w0rd!".to_string());
 
-        let user_pw = "p@$$w0rd!".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(verifier.pw_verify(user_pw));
+        assert!(
+            verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_login_verifier_with_long_password() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_login_verifier_with_long_password(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "a_very_long_password_that_exceeds_normal_length".to_string(),
         );
 
-        let user_pw = "a_very_long_password_that_exceeds_normal_length".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(verifier.pw_verify(user_pw));
+        assert!(
+            verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_passwords_with_spaces_and_tabs() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_passwords_with_spaces_and_tabs(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "   password_with_spaces_and_tabs\t".to_string(),
         );
 
-        let user_pw = "   password_with_spaces_and_tabs\t".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(verifier.pw_verify(user_pw));
+        assert!(
+            verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 
-    #[test]
-    fn test_passwords_with_spaces_and_tabs_2() {
+    #[rstest]
+    #[tokio::test]
+    #[awt]
+    async fn test_passwords_with_spaces_and_tabs_2(
+        #[future] mongo_client: mongodb::Client,
+        #[future] mut redis_client: aio::ConnectionManager,
+    ) {
         let mut verifier: users::Users = users::Users::new(
             "the_email".to_string(),
             "   password with spaces and tabs\t".to_string(),
         );
 
-        let user_pw = "   password with spaces and tabs\t".to_string();
-
-        let encrypted_pw: PassWorder = PassWorder::new(verifier.get_pw().clone())
+        let encrypted_pw: PassWorder = PassWorder::new(&verifier.get_pw())
             .encrypt()
             .salt()
             .pepper();
 
-        let (_, pw, _) = encrypted_pw.deconstruct();
+        verifier.set_pw(&encrypted_pw.to_string());
 
-        verifier.set_pw(&pw);
-
-        assert!(verifier.pw_verify(user_pw));
+        assert!(
+            verifier
+                .pw_verify(&mongo_client, &mut redis_client, Some(true))
+                .await
+                .unwrap()
+        );
     }
 }

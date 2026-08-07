@@ -127,11 +127,11 @@ pub async fn register_user(
 
     let encrypted_pw: PassWorder = PassWorder::new(password).encrypt().salt(); //.pepper();
 
-    let (salt, _pw, _pepper) = encrypted_pw.deconstruct();
+    // let (_salt, _pw, _pepper) = encrypted_pw.deconstruct();
 
     // Save the user to the database
     let result_oid = db
-        .insert_one(Users::new(email.clone(), encrypted_pw.to_string(), salt))
+        .insert_one(Users::new(email.clone(), encrypted_pw.to_string()))
         .await;
 
     match result_oid {

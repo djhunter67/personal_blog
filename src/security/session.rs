@@ -75,11 +75,7 @@ mod tests {
             .expect("Failed to create Redis connection pool");
 
         let email = "test_email@example.com";
-        let user: users::Users = users::Users::new(
-            email.to_string(),
-            "test_password".to_string(),
-            String::new(),
-        );
+        let user: users::Users = users::Users::new(email.to_string(), "test_password".to_string());
 
         let resp = create_session(&user, conn).await;
 
@@ -102,7 +98,6 @@ mod tests {
         let user: users::Users = users::Users::new(
             "some_email@example.com".to_string(),
             "some_password".to_string(),
-            String::new(),
         );
 
         let session_id = create_session(&user, conn.clone())
@@ -129,7 +124,6 @@ mod tests {
         let user: users::Users = users::Users::new(
             "the_email@example.com".to_string(),
             "some_password".to_string(),
-            String::new(),
         );
 
         let resp = create_session(&user, conn.clone()).await;
