@@ -124,7 +124,8 @@ async fn run(
                     .service(user_input::submit_text)
                     .service(user_input::edit_submission)
                     .service(user_input::update_text)
-                    .service(user_input::delete_submission),
+                    .service(user_input::delete_submission)
+                    .service(user_input::post_image),
             )
             .route("/sse", web::get().to(index::sse))
     })

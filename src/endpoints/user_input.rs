@@ -1,5 +1,6 @@
-use std::fmt::Display;
+use std::{fmt::Display, fs::File};
 
+use actix_multipart::form::MultipartForm;
 use actix_web::{
     HttpRequest, HttpResponse, delete, post,
     web::{self, Data, Form},
@@ -19,6 +20,7 @@ use crate::{
         mongo::{self, JournalDraft},
         redis_conf::authenticated_user_id,
     },
+    personnel::images::{self, ImageUpload},
 };
 
 /// # TODO
@@ -625,6 +627,12 @@ pub async fn delete_submission(
 ///   If the user is not logged in, return an "`HttpResponse::Unauthorized`" error.
 /// # Panics
 ///   If the "`redis`" connection pool is not available, the function will panic.
+#[instrument(
+    name = "Validates a user",
+    level = "info",
+    target = "User input",
+    skip(req, redis_client)
+)]
 pub async fn validate_user(
     req: &HttpRequest,
     redis_client: &Data<redis::aio::ConnectionManager>,
@@ -672,6 +680,90 @@ pub async fn validate_user(
         tracing::info!("User is logged in: {user:#?}");
         Ok(true)
     }
+}
+
+#[allow(clippy::future_not_send)]
+#[instrument(
+    name = "User Deletes a submitted blog",
+    level = "info",
+    target = "Delete Submission",
+    skip(req, mongo_client, redis_client, image)
+)]
+#[post("/post_image")]
+pub async fn post_image(
+    mongo_client: Data<mongodb::Client>,
+    redis_client: Data<aio::ConnectionManager>,
+    req: HttpRequest,
+    MultipartForm(image): MultipartForm<ImageUpload>,
+) -> HttpResponse {
+    tracing::info!("Post image endpoint");
+
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(user_oid) => user_oid,
+        Err(err) => {
+            tracing::error!(?err, "Unable to authenticate the user");
+            return HttpResponse::Unauthorized().finish();
+        }
+    };
+
+    tracing::info!(%user_oid, "User is authenticated");
+
+    // Handle the image upload logic here
+
+    if let Some(img) = &image.image {
+        tracing::warn!(
+            size = img.size / (1024 * 1024),
+            file_name = ?img.file_name,
+            content_type = ?img.content_type,
+        );
+
+        // Give the file size in Mega Bytes not Mega bits
+        let img_size: f32 = img.size as f32 / (1024.0 * 1024.0);
+        tracing::warn!("Image size in Mb: {img_size:.2} MB");
+
+        let img_location: &str = &img.file.path().to_string_lossy();
+
+        tracing::warn!("The location on this system of the temp file: {img_location}");
+
+        // Decode the file as an image
+        let img_file: File = File::open(img_location).expect("");
+
+        // tracing::warn!("The file is open: {:#?}", img_file.metadata().expect(""));
+
+        let metadata = match img_file.try_clone().expect("").metadata() {
+            Ok(data) => data,
+            Err(err) => {
+                tracing::error!("Unable to get parse file metadata: {err:#?}");
+                return HttpResponse::Ok().body("Unable to parse the image");
+            }
+        };
+
+        // Ensure the file is not a directory or a symlink
+        if metadata.is_dir() || metadata.is_symlink() && metadata.is_file() {
+            tracing::error!("Image is not a file");
+            return HttpResponse::Ok().body("Image is not a file");
+        }
+
+        if !images::process_image(img_file).expect("") {
+            tracing::error!("Image processing in development");
+        };
+
+        drop(metadata);
+
+        // img_file.lock().unwrap()
+
+        // let image_id = img
+        //     .file_name
+        //     .as_ref()
+        //     .expect("Image has no name")
+        //     .to_string();
+
+        return HttpResponse::Ok().body(format!("Image file size is: {img_size} Mb"));
+    } else {
+        tracing::info!("No image uploaded");
+    }
+
+    HttpResponse::Ok().body("Image Error")
 }
 
 // #[allow(clippy::future_not_send)]

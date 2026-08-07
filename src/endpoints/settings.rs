@@ -136,8 +136,9 @@ pub async fn settings_change(
             content_type = ?img.content_type,
         );
 
-        let img_bytes = img.size / 1024;
-        tracing::warn!("Image bytes size: {} MB", img_bytes / 100);
+        let img_bytes: f32 = img.size as f32 / (1024.0 * 1024.0);
+        // limit the output to 2 decimal places
+        tracing::warn!("Image bytes size: {:.2} MB", img_bytes);
     } else {
         tracing::info!("No image uploaded");
     }
@@ -149,6 +150,11 @@ pub async fn settings_change(
     }
 
     let pw_1 = pw_1.unwrap_or("");
+
+    if pw_1.is_empty() {
+        tracing::info!("No password change requested");
+        return HttpResponse::Ok().json("No password change requested");
+    }
 
     match update_user_pw(pw_1, &mongo_client, &user_oid).await {
         Ok(()) => tracing::info!("Password update succeeded"),

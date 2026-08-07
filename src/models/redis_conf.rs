@@ -44,11 +44,11 @@ pub async fn authenticated_user_id(
 
     let user_session = format!("session:{}", session_cookie.value());
 
-    tracing::info!("Establishing the Redis connection");
+    tracing::debug!("Establishing the Redis connection");
     // let mut redis_conn =
     // establish_connection(redis_client).map_err(|_| AuthenticationError::Redis)?;
 
-    tracing::info!("Getting the user from the session");
+    tracing::debug!("Getting the user from the session");
     let user_email: Option<String> = redis_client
         .as_ref()
         .clone()
@@ -56,7 +56,7 @@ pub async fn authenticated_user_id(
         .await
         .map_err(|_| AuthenticationError::Redis)?;
 
-    tracing::warn!("Checking that the email to check against is valid: {user_email:#?}");
+    tracing::debug!("Checking that the email to check against is valid: {user_email:#?}");
 
     let cache_key = format!("user:auth:{}", user_email.clone().unwrap_or_default());
     let user_id: Option<String> = redis_client
@@ -66,7 +66,7 @@ pub async fn authenticated_user_id(
         .await
         .map_err(|_| AuthenticationError::Redis)?;
 
-    tracing::info!("Checking that the serialized session is valid: {user_id:#?}");
+    tracing::debug!("Checking that the serialized session is valid: {user_id:#?}");
     // I need an email for the user to be able to get the oid from Mongo
     let user_id = match user_id {
         None => {
@@ -82,12 +82,12 @@ pub async fn authenticated_user_id(
                 .await
                 .map_err(|_| AuthenticationError::InvalidSession)?;
 
-            tracing::info!("Checking that the db user data is valid: {user_doc:?}");
+            tracing::debug!("Checking that the db user data is valid: {user_doc:?}");
 
             if let Some(user_doc) = user_doc
                 && let Ok(user_id) = user_doc.get_object_id("_id")
             {
-                tracing::warn!("User ID found in MongoDB: {user_id}");
+                tracing::debug!("User ID found in MongoDB: {user_id}");
                 return Ok(user_id);
             }
 
@@ -97,7 +97,7 @@ pub async fn authenticated_user_id(
             Err(AuthenticationError::MissingSession)?
         }
         Some(user_bson_oid) => {
-            tracing::warn!(
+            tracing::debug!(
                 "Cache-Hit: {}",
                 user_bson_oid
                     .split(':')
@@ -125,7 +125,7 @@ pub async fn authenticated_user_id(
     // let session: UserSession =
     // serde_json::from_str(&user_id).map_err(|_| AuthenticationError::InvalidSession)?;
 
-    // tracing::warn!("Passing back the ObjectId from the session: {user_id:#?}");
+    // tracing::debug!("Passing back the ObjectId from the session: {user_id:#?}");
     // ObjectId::parse_str(session).map_err(|_| AuthenticationError::InvalidSession)
     Ok(user_id)
 }

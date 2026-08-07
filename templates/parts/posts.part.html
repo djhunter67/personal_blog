@@ -26,16 +26,17 @@
 	</button>
 	<input
 	  enctype="multipart/form-data"
+	  hx-encoding="multipart/form-data"
 	  hx-post="/v1/post_image"
-	  hx-target="#settings_response"
+	  hx-target="#upload_response"
 	  hx-swap="innerHTML"
 	  type="file"
-	  id="profile_image"
-	  name="profile_image"
+	  name="post_image"
 	  accept="image/*"
 	  >
       </div>
   </div>
 
   {% endfor %}
-  
+
+  <div id="upload_response"></div>
