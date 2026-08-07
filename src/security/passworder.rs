@@ -1,8 +1,7 @@
 use std::fmt::Display;
 
 use base64::{Engine, engine::general_purpose};
-use chacha20::{ChaCha20, ChaCha20Rng, KeyIvInit, cipher::StreamCipher};
-use rand::{Rng, SeedableRng};
+use chacha20::{ChaCha20, KeyIvInit, cipher::StreamCipher};
 use tracing::instrument;
 
 use crate::security::PEPPER;
@@ -77,15 +76,15 @@ impl PassWorder {
     #[must_use = "Salt encrypted passwords"]
     pub fn salt(mut self) -> Self {
         tracing::debug!("Salting");
-        let seed: [u8; 32] = [42u8; 32];
+        // let seed: [u8; 32] = [42u8; 32];
 
-        // let random_salt: [u8; 16] = rand::random();
+        // let mut random_salt: [u8; 16] = [0; 16];
 
-        let mut random_salt: [u8; 16] = [0; 16];
+        // let mut seed_core: ChaCha20Rng = ChaCha20Rng::from_seed(seed);
 
-        let mut seed_core: ChaCha20Rng = ChaCha20Rng::from_seed(seed);
+        // seed_core.fill_bytes(&mut random_salt);
 
-        seed_core.fill_bytes(&mut random_salt);
+        let random_salt: [u8; 16] = rand::random();
 
         self.pw
             .insert_str(0, &format!("{}$", hex::encode(random_salt)));

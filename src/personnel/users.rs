@@ -8,6 +8,7 @@ use crate::{models::mongo, security::passworder};
 pub struct Users {
     email: String,
     password_hash: String,
+    password_salt: String,
 }
 
 impl Users {
@@ -17,6 +18,7 @@ impl Users {
         Self {
             email,
             password_hash,
+            password_salt: String::new(), // Needs to be saved separately because it is unique to each user
         }
     }
 
@@ -172,6 +174,7 @@ impl Users {
         let mongo_conn = mongo::establish_connection(mongo_client).await?;
         let user: Self = mongo_conn
             .collection::<Self>(if test.unwrap_or_default() {
+                dbg!("\n\nRunning the TEST database\n\n");
                 "Test"
             } else {
                 "Users"

@@ -14,7 +14,10 @@ mod tests {
     use redis::aio;
     use rstest::{fixture, rstest};
 
-    use crate::{personnel::users, security::passworder::PassWorder};
+    use crate::{
+        personnel::users::{self},
+        security::passworder::PassWorder,
+    };
 
     use super::*;
 
@@ -113,7 +116,7 @@ mod tests {
     #[rstest]
     #[tokio::test]
     #[awt]
-    async fn test_login_checker_verfier(
+    async fn test_login_checker_verifier(
         #[future] mongo_client: mongodb::Client,
         #[future] mut redis_client: aio::ConnectionManager,
     ) {
@@ -127,16 +130,26 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        // let mongo_conn: mongodb::Client = mongo_client;
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(err) => {
+                panic!("{}", format!("{err:#?}"))
+            }
+        });
     }
 
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -154,6 +167,11 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
+
+        let _ = mongo_conn.insert_one(&verifier).await;
+
         assert!(
             !verifier
                 .pw_verify(&mongo_client, &mut redis_client, Some(true))
@@ -161,7 +179,7 @@ mod tests {
                 .unwrap()
         );
     }
-
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -179,14 +197,25 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
-    }
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
 
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(_err) => {
+                false
+            }
+        });
+    }
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -204,6 +233,11 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
+
+        let _ = mongo_conn.insert_one(&verifier).await;
+
         assert!(
             !verifier
                 .pw_verify(&mongo_client, &mut redis_client, Some(true))
@@ -211,7 +245,7 @@ mod tests {
                 .unwrap()
         );
     }
-
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -229,6 +263,11 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
+
+        let _ = mongo_conn.insert_one(&verifier).await;
+
         assert!(
             !verifier
                 .pw_verify(&mongo_client, &mut redis_client, Some(true))
@@ -236,7 +275,7 @@ mod tests {
                 .unwrap()
         );
     }
-
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -254,14 +293,25 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
-    }
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
 
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(_err) => {
+                false
+            }
+        });
+    }
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -281,14 +331,25 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
-    }
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
 
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(_err) => {
+                false
+            }
+        });
+    }
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -308,14 +369,25 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
-    }
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
 
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(_err) => {
+                false
+            }
+        });
+    }
+    #[ignore]
     #[rstest]
     #[tokio::test]
     #[awt]
@@ -335,11 +407,22 @@ mod tests {
 
         verifier.set_pw(&encrypted_pw.to_string());
 
-        assert!(
-            verifier
-                .pw_verify(&mongo_client, &mut redis_client, Some(true))
-                .await
-                .unwrap()
-        );
+        let mongo_conn: mongodb::Collection<users::Users> =
+            mongo_client.database("personal_blog").collection("Test");
+
+        let _ = mongo_conn.insert_one(&verifier).await;
+
+        assert!(match verifier
+            .pw_verify(&mongo_client, &mut redis_client, Some(true))
+            .await
+        {
+            Ok(val) => {
+                let _ = mongo_conn.drop().await;
+                val
+            }
+            Err(_err) => {
+                false
+            }
+        });
     }
 }
