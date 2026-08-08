@@ -17,26 +17,16 @@
 	class="card__buttons"
 	>
 	<button
-	  hx-post="/v1/submit_text"
-	  hx-target="#template_pages"
+	  hx-post="/v1/edit_submission"
+	  hx-target="#main__info_cards"
 	  hx-swap="outerHTML"
 	  hx-vals='{"title": "{{card.get_title()}}", "body": "{{card.get_body()}}", "author": "{{card.get_author()}}"}'
 	  type="button"
 	  >EDIT
 	</button>
-	<input
-	  enctype="multipart/form-data"
-	  hx-encoding="multipart/form-data"
-	  hx-post="/v1/post_image"
-	  hx-target="#upload_response"
-	  hx-swap="innerHTML"
-	  type="file"
-	  name="post_image"
-	  accept="image/*"
-	  >
       </div>
   </div>
 
   {% endfor %}
 
-  <div id="upload_response"></div>
+  <div id="upload_response" style="grid-column: 1 / -1"></div>

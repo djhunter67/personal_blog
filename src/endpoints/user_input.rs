@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::{IndexTemplate, JournalPostEdit, JournalPostEditor},
+    endpoints::templates::{Confirmation, IndexTemplate, JournalPostEdit, JournalPostEditor},
     models::{
         mongo::{self, JournalDraft},
         redis_conf::authenticated_user_id,
@@ -421,6 +421,57 @@ pub async fn edit_submission(
     input.toggle_logged_in();
     input.set_user_id(user_oid.to_string());
 
+    let edit_template = JournalPostEdit::new(input);
+
+    let render = match edit_template.render() {
+        Ok(html) => html,
+        Err(err) => {
+            tracing::error!(
+                ?err,
+                %user_oid,
+                "Entry retrieved but rendering failed"
+            );
+            return HttpResponse::InternalServerError()
+                .body("Entry retrieved but rendering failed.");
+        }
+    };
+
+    HttpResponse::Ok().body(render)
+}
+
+/// Endpoint editor for  a submission. This endpoint retrieves the latest journal entry for the authenticated user and renders it to be editable.
+/// # Errors
+///
+/// - Returns `HttpResponse::Unauthorized` if the user is not authenticated.
+/// - Returns `HttpResponse::InternalServerError` if there is an issue connecting to the database or retrieving the journal entry.
+/// - Returns `HttpResponse::NotFound` if no journal entry is found for the authenticated user.
+#[allow(clippy::future_not_send)]
+#[instrument(
+    name = "User text editor",
+    level = "info",
+    target = "Editor for the Blog Post",
+    skip(req, mongo_client, redis_client, input)
+)]
+#[post("/editor_submission")]
+pub async fn editor_submission(
+    redis_client: Data<aio::ConnectionManager>,
+    mongo_client: Data<mongodb::Client>,
+    Form(mut input): web::Form<BlogPost>,
+    req: HttpRequest,
+) -> HttpResponse {
+    tracing::info!("Edit submission endpoint");
+
+    let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
+        Ok(user_oid) => user_oid,
+        Err(err) => {
+            tracing::error!(?err, "Unable to authenticate the user");
+            return HttpResponse::Unauthorized().finish();
+        }
+    };
+
+    input.toggle_logged_in();
+    input.set_user_id(user_oid.to_string());
+
     let edit_template = JournalPostEditor::new(input);
 
     let render = match edit_template.render() {
@@ -452,7 +503,7 @@ pub async fn update_text(
     req: HttpRequest,
     mongo_client: Data<mongodb::Client>,
     redis_client: Data<aio::ConnectionManager>,
-    Form(input): web::Form<JournalDraftInput>,
+    Form(input): web::Form<BlogPost>,
 ) -> HttpResponse {
     tracing::info!("Update text endpoint");
 
@@ -540,7 +591,7 @@ pub async fn update_text(
     //     }
     // };
 
-    let edit_template = JournalPostEditor::new(entry);
+    let edit_template = JournalPostEdit::new(entry);
 
     let render = match edit_template.render() {
         Ok(html) => html,
@@ -602,7 +653,10 @@ pub async fn delete_submission(
     match journal_entries.find_one_and_delete(filter).sort(sort).await {
         Ok(deleted_entry) => {
             tracing::warn!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
-            let index_template = IndexTemplate::new(vec![], "user_email", true);
+            let index_template = Confirmation::new(
+                String::from("Delete Successful"),
+                format!("The deleted document: {deleted_entry:#?}"),
+            );
 
             let render = match index_template.render() {
                 Ok(render) => render,
@@ -757,7 +811,7 @@ pub async fn post_image(
         //     .expect("Image has no name")
         //     .to_string();
 
-        return HttpResponse::Ok().body(format!("Image file size is: {img_size} Mb"));
+        return HttpResponse::Ok().body(format!("Image file size is: {img_size:.3} Mb"));
     }
     tracing::info!("No image uploaded");
 

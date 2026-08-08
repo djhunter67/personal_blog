@@ -27,7 +27,7 @@
     </button>
     <button
       id="main__confirmation__edit"
-      hx-post="/v1/edit_submission"
+      hx-post="/v1/editor_submission"
       hx-vals='{"title": "{{content.get_title()}}", "body": "{{content.get_body()}}"}'
       hx-target="#main"
       hx-swap="innerHTML">
@@ -36,6 +36,8 @@
     <button
       id="main__confirmation__delete"
       hx-delete="/v1/delete_submission"
+      hx-target="#main"
+      hx-swap="outerHTML"
       >
       DELETE
     </button>

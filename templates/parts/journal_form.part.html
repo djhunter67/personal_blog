@@ -10,4 +10,14 @@
   <button type="submit">Submit</button>
 </form>
 
-
+<input
+  id="picture_upload"
+  enctype="multipart/form-data"
+  hx-encoding="multipart/form-data"
+  hx-post="/v1/post_image"
+  hx-target="#upload_response"
+  hx-swap="innerHTML"
+  type="file"
+  name="post_image"
+  accept="image/*"
+  >

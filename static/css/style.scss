@@ -165,6 +165,7 @@ $light-yellow: hsl(60, 100%, 90%);
     @include meta.load-css("_registration");
     @include meta.load-css("_error");
     @include meta.load-css("_settings");
+    @include meta.load-css("_confirmation");
 }
 
 #info_buttons {

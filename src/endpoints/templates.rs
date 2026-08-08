@@ -119,19 +119,21 @@ impl JournalPostEditor {
     }
 }
 
-// #[derive(Template)]
-// #[template(path = "parts/posts.part.html")]
-// pub struct PostPart {
-//     content: Vec<BlogPost>,
-//     user: String,
-// }
+#[derive(Template)]
+#[template(path = "parts/confirmations.part.html")]
+pub struct Confirmation {
+    header_message: String,
+    body_message: String,
+}
 
-// impl PostPart {
-//     #[must_use]
-//     pub const fn new(content: Vec<BlogPost>, user: String) -> Self {
-//         Self { content, user }
-//     }
-// }
+impl Confirmation {
+    pub fn new(header_message: String, body_message: String) -> Self {
+        Self {
+            header_message,
+            body_message,
+        }
+    }
+}
 
 #[derive(Template)]
 #[template(path = "parts/draft_status.part.html")]
