@@ -627,6 +627,7 @@ pub async fn delete_submission(
 ///   If the user is not logged in, return an "`HttpResponse::Unauthorized`" error.
 /// # Panics
 ///   If the "`redis`" connection pool is not available, the function will panic.
+#[allow(clippy::future_not_send)]
 #[instrument(
     name = "Validates a user",
     level = "info",
@@ -718,7 +719,7 @@ pub async fn post_image(
         );
 
         // Give the file size in Mega Bytes not Mega bits
-        let img_size: f32 = img.size as f32 / (1024.0 * 1024.0);
+        let img_size: f64 = f64::from(u32::try_from(img.size).expect("")) / (1024.0 * 1024.0);
         tracing::warn!("Image size in Mb: {img_size:.2} MB");
 
         let img_location: &str = &img.file.path().to_string_lossy();
@@ -744,11 +745,9 @@ pub async fn post_image(
             return HttpResponse::Ok().body("Image is not a file");
         }
 
-        if !images::process_image(img_file).expect("") {
+        if !images::process_image(img_file).await.expect("") {
             tracing::error!("Image processing in development");
-        };
-
-        drop(metadata);
+        }
 
         // img_file.lock().unwrap()
 
@@ -759,9 +758,8 @@ pub async fn post_image(
         //     .to_string();
 
         return HttpResponse::Ok().body(format!("Image file size is: {img_size} Mb"));
-    } else {
-        tracing::info!("No image uploaded");
     }
+    tracing::info!("No image uploaded");
 
     HttpResponse::Ok().body("Image Error")
 }
