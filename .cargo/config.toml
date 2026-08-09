@@ -2,4 +2,4 @@
 linker = "aarch64-linux-gnu-gcc"
 
 [target.aarch64-unknown-linux-musl]
-linker = "aarch64-linux-musl-gcc"
+linker = "/usr/bin/aarch64-linux-musl-gcc"

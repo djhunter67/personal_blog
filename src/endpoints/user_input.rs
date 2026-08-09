@@ -1,4 +1,4 @@
-use std::{fmt::Display, fs::File};
+pub(crate) use std::{fmt::Display, fs::File};
 
 use actix_multipart::form::MultipartForm;
 use actix_web::{
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::{Confirmation, IndexTemplate, JournalPostEdit, JournalPostEditor},
+    endpoints::templates::{Confirmation, JournalPostEdit, JournalPostEditor},
     models::{
         mongo::{self, JournalDraft},
         redis_conf::authenticated_user_id,
@@ -311,6 +311,8 @@ pub async fn submit_text(
         }
     };
 
+    tracing::info!("The data passed from the form: {input:#?}");
+
     input.toggle_logged_in();
     input.set_user_id(user_oid.to_string());
 
@@ -323,22 +325,6 @@ pub async fn submit_text(
     }
     .collection::<BlogPost>("BlogPosts");
 
-    // let drafts = match mongo::establish_connection(&mongo_client).await {
-    //     Ok(conn) => conn,
-    //     Err(err) => {
-    //         tracing::error!(?err, "Unable to procure the db connection");
-    //         return HttpResponse::InternalServerError().finish();
-    //     }
-    // }
-    // .collection::<JournalDraft>("journal_entries");
-
-    // let new_entry = BlogPost::new(
-    //     title.to_owned(),
-    //     body.to_owned(),
-    //     author.to_owned(),
-    //     user_oid.to_string(),
-    //     true,
-    // );
     tracing::warn!("Reusing the passed in  BlogPost instance: {input:#?}");
 
     match journal_entries.insert_one(&input).await {
@@ -357,6 +343,8 @@ pub async fn submit_text(
             //         "Entry published but draft cleanup failed"
             //     );
             // }
+
+            // All business for saving the post is done, now return the result
             let blog_template = JournalPostEdit::new(input);
 
             let render = match blog_template.render() {
