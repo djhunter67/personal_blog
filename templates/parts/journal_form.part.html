@@ -2,7 +2,7 @@
   hx-post="/v1/submit_text"
   hx-swap="outerHTML"
   hx-target="#main__info_cards"
-  hx-trigger="keydown[ctrlKey && key=='Enter'] from:textarea || click"
+  hx-trigger="click, keydown[ctrlKey && key=='Enter'] from:textarea"
   id="main__info_cards__journaler"
   >
   <input id="main__info_cards__journaler__title" type="text" name="title" placeholder="Place title here" required>
