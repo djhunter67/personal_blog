@@ -256,7 +256,7 @@ pub async fn icon_large() -> Result<NamedFile, actix_web::Error> {
 pub async fn manifest() -> Result<NamedFile, actix_web::Error> {
     tracing::info!("Serving manifest");
     let filename = "manifest.json";
-    let path: PathBuf = ["static", "manifest", filename].iter().collect();
+    let path: PathBuf = ["static", filename].iter().collect();
 
     let file = match NamedFile::open(path) {
         Ok(file) => file,
