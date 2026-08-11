@@ -10,8 +10,9 @@
         {{ content.get_body() }}
       </p>
       <h3>
-	{{ content.get_date() }} --> User ID: {{ content.get_user_id() }}
+	{{ content.get_date() }}
       </h3>
+      <h4 hidden> {{ content.user_id() }}{{ content.post_id }}
     </div>
   </div>
 </section>

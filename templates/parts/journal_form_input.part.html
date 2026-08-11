@@ -18,7 +18,9 @@
     name="body"
     placeholder="Enter your text here"
     rows="9"
+    required
     >{{ content.get_body() }}</textarea>
+  <input id="hidden_to_pass_the_post_oid" hidden name="post_oid" value="{{ content.get_post_oid()  }}">
   <button type="submit">Submit</button>
 </form>
 

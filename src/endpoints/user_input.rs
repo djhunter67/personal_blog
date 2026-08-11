@@ -47,6 +47,7 @@ pub struct BlogPost {
     body: String,
     author: String,
     user_id: String,
+    post_id: String,
     date: BsonDateTime,
     logged_in: bool,
 }
@@ -62,6 +63,7 @@ impl BlogPost {
         body: String,
         author: String,
         user_id: String,
+        post_id: String,
         logged_in: bool,
     ) -> Self {
         Self {
@@ -69,6 +71,7 @@ impl BlogPost {
             body,
             author,
             user_id,
+            post_id,
             date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
             logged_in,
         }
@@ -159,7 +162,7 @@ impl BlogPost {
 
         // tracing::info!("EST Time: {}", time);
 
-        format!("{year}-{month}-{day} {time} EST")
+        format!("{year}-{month}-{day}   {time} EST")
     }
 
     #[must_use]
@@ -178,6 +181,16 @@ impl BlogPost {
     #[must_use]
     pub const fn is_logged_in(&self) -> bool {
         self.logged_in
+    }
+
+    #[must_use = "Set the post id"]
+    pub fn set_post_id(&mut self, post_id: String) {
+        self.post_id = post_id
+    }
+
+    #[must_use]
+    pub fn get_post_id(&self) -> &str {
+        &self.post_id
     }
 }
 
@@ -198,6 +211,7 @@ impl Default for BlogPost {
             body: String::new(),
             author: String::new(),
             user_id: String::new(),
+            post_id: String::new(),
             logged_in: false,
             date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
         }
@@ -345,6 +359,15 @@ pub async fn submit_text(
             // }
 
             // All business for saving the post is done, now return a result
+            let oid: String = if let Some(str_oid) = oid.inserted_id.as_object_id() {
+                tracing::info!("Converting the post oid to a string");
+                str_oid.to_string()
+            } else {
+                tracing::error!("Unable to convert the post oid to a string");
+                String::new()
+            };
+
+            input.post_id = oid;
             let blog_template = JournalPostEdit::new(input);
 
             let render = match blog_template.render() {
