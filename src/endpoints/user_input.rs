@@ -16,11 +16,11 @@ use tracing::instrument;
 
 use crate::{
     endpoints::templates::{Confirmation, JournalPostEdit, JournalPostEditor},
+    images::{self, ImageUpload},
     models::{
         mongo::{self, JournalDraft},
         redis_conf::authenticated_user_id,
     },
-    personnel::images::{self, ImageUpload},
 };
 
 /// # TODO

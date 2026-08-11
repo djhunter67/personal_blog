@@ -1,4 +1,4 @@
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt};
 
 #[must_use]
 /// # Result
@@ -23,7 +23,7 @@ pub fn get_subcriber(debug: bool) -> impl tracing::Subscriber + Send + Sync {
     let json_log = if debug {
         None
     } else {
-        let json_log = tracing_subscriber::fmt::layer().json();
+        let json_log = tracing_subscriber::fmt::layer().compact().pretty();
         Some(json_log)
     };
 

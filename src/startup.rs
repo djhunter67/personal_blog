@@ -2,8 +2,7 @@ use crate::endpoints::{
     self, health, index, login, logout, register, settings, templates, user_input, validate_email,
 };
 use crate::settings::Settings;
-use actix_web::web::{self, Data};
-use actix_web::{App, HttpServer, http::KeepAlive, middleware};
+use actix_web::{self, App, HttpServer, http::KeepAlive, middleware, web};
 use mongodb::options::ClientOptions;
 use redis::aio::{self, ConnectionManagerConfig};
 use std::net;
@@ -59,7 +58,6 @@ async fn run(
         }
         Err(err) => {
             tracing::error!("Unable to connect to the database: {err:#?}",);
-            // panic!("Application cannot start: {err:#?}")
             ClientOptions::parse("mongodb://localhost:27017")
                 .await
                 .expect("Unable to procure the database")
@@ -73,11 +71,12 @@ async fn run(
             panic!("Application cannot start: {err:#?}")
         }
     };
-    // .database(&mongo_settings.db);
+
+    // let static_files: fs::Files = fs::Files::new("/static", ".").show_files_listing();
 
     // Connect to the MongoDB database
-    let db_redis = Data::new(redis_pool);
-    let db_mongo = Data::new(mongo_pool);
+    let db_redis = web::Data::new(redis_pool);
+    let db_mongo = web::Data::new(mongo_pool);
     tracing::info!("Processed DB & Cache connection pool for distribution");
 
     let server = HttpServer::new(move || {

@@ -13,7 +13,7 @@ Environment="APP_REDIS__URI=redis://:secret_passers_redis@10.20.20.202:6379"
 Environment="APP_ENVIRONMENT=production"
 
 
-ExecStart=/home/ripley/personal_journal_musl_release
+ExecStart=/home/ripley/personal_journal
 Restart=on-failure
 
 StandardOutput=journal
