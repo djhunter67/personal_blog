@@ -1,10 +1,4 @@
-mod png;
-
-use std::fmt;
-use std::fs;
-
 use actix_multipart::form::{MultipartForm, tempfile::TempFile};
-use tracing::instrument;
 
 #[derive(Debug, MultipartForm)]
 pub struct ImageUpload {

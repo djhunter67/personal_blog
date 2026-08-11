@@ -16,7 +16,7 @@ use tracing::instrument;
 
 use crate::{
     endpoints::templates::{Confirmation, JournalPostEdit, JournalPostEditor},
-    images::{self, ImageUpload},
+    images::ImageUpload,
     models::{
         mongo::{self, JournalDraft},
         redis_conf::authenticated_user_id,
@@ -344,7 +344,7 @@ pub async fn submit_text(
             //     );
             // }
 
-            // All business for saving the post is done, now return the result
+            // All business for saving the post is done, now return a result
             let blog_template = JournalPostEdit::new(input);
 
             let render = match blog_template.render() {
@@ -785,10 +785,6 @@ pub async fn post_image(
         if metadata.is_dir() || metadata.is_symlink() && metadata.is_file() {
             tracing::error!("Image is not a file");
             return HttpResponse::Ok().body("Image is not a file");
-        }
-
-        if !images::process_image(img_file).await.expect("") {
-            tracing::error!("Image processing in development");
         }
 
         // img_file.lock().unwrap()

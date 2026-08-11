@@ -7,7 +7,7 @@
       id="password_reset"
       enctype="multipart/form-data"
       hx-post="/v1/settings_change"
-      hx-target="#settings_response"
+      hx-target="#settings__response"
       hx-swap="innerHTML"
       >
       <label for="email_update">UPDATE EMAIL</label>
@@ -44,7 +44,7 @@
       <button type="submit">SUBMIT</button>
     </form>
   </div>
-  <div id="settings_response">response here</div>
+  <div id="settings__response"></div>
   
 
 {% call super() %} {% endblock %}
