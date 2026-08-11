@@ -57,7 +57,7 @@ pub async fn index(
             tracing::error!("Unable to validate the user: {err:#?}");
             // return HttpResponse::InternalServerError().json(format!("{err:#?}"));
             let default_template = IndexTemplate {
-                user_email: String::from("Please login to create a post"),
+                user_email: String::from("Please login to create a journal entry"),
                 ..Default::default()
             };
             let rendered = match default_template.render() {
@@ -86,7 +86,8 @@ pub async fn index(
     match user.clone() {
         None => {
             tracing::warn!("User is not logged in: {user:#?}");
-            let var_name = IndexTemplate::new(blog_post, "None", false);
+            let var_name =
+                IndexTemplate::new(blog_post, "Please login to create a journal entry", false);
 
             let rendered = var_name.render().expect("Failed to render template");
             HttpResponse::Ok().body(rendered)

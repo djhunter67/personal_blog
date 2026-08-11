@@ -49,7 +49,8 @@ pub async fn logout(
         }
     };
 
-    let index_template = IndexTemplate::new(vec![], "None", false);
+    let index_template =
+        IndexTemplate::new(vec![], "Please login to create a journal entry", false);
 
     HttpResponse::Ok().body(
         index_template
