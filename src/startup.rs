@@ -89,6 +89,10 @@ async fn run(
             .service(
                 web::scope("/static")
                     .service(templates::favicon)
+                    .service(templates::icon_192)
+                    .service(templates::icon_512)
+                    .service(templates::icon_large)
+                    .service(templates::manifest)
                     .service(templates::logomain)
                     .service(templates::usmc_patrolling)
                     .service(templates::stylesheet)

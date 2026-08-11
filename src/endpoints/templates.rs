@@ -2,7 +2,7 @@ use actix_files::NamedFile;
 use actix_web::{HttpResponse, Responder, get};
 use askama::Template;
 use std::path::PathBuf;
-use tracing::{error, info, instrument};
+use tracing::instrument;
 
 use super::user_input::BlogPost;
 
@@ -164,16 +164,104 @@ impl<'a> ErrorPage<'a> {
 }
 
 #[get("/favicon")]
-#[instrument(name = "Serving favicon", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving favicon", level = "info", target = "Static Content")]
 pub async fn favicon() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving favicon");
+    tracing::info!("Serving favicon");
     let filename = "head_shot.ico";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
 
     let file = match NamedFile::open(path) {
         Ok(file) => file,
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
+    };
+
+    Ok(file)
+}
+
+#[get("/icon-192")]
+#[instrument(
+    name = "Serving the icons-192",
+    level = "info",
+    target = "Static Content"
+)]
+pub async fn icon_192() -> Result<NamedFile, actix_web::Error> {
+    tracing::info!("Serving icon-192");
+    let filename = "icon-192.png";
+    let path: PathBuf = ["static", "imgs", filename].iter().collect();
+
+    let file = match NamedFile::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
+    };
+
+    Ok(file)
+}
+
+#[get("/icon-512")]
+#[instrument(
+    name = "Serving the icons-512",
+    level = "info",
+    target = "Static Content"
+)]
+pub async fn icon_512() -> Result<NamedFile, actix_web::Error> {
+    tracing::info!("Serving icon-512");
+    let filename = "icon-512.png";
+    let path: PathBuf = ["static", "imgs", filename].iter().collect();
+
+    let file = match NamedFile::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
+    };
+
+    Ok(file)
+}
+
+#[get("/icon_large")]
+#[instrument(
+    name = "Serving the icon_large",
+    level = "info",
+    target = "Static Content"
+)]
+pub async fn icon_large() -> Result<NamedFile, actix_web::Error> {
+    tracing::info!("Serving icon_large");
+    let filename = "icon_large.png";
+    let path: PathBuf = ["static", "imgs", filename].iter().collect();
+
+    let file = match NamedFile::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
+    };
+
+    Ok(file)
+}
+
+#[get("/manifest.webmanifest")]
+#[instrument(
+    name = "Serving the manifest",
+    level = "info",
+    target = "Static Content"
+)]
+pub async fn manifest() -> Result<NamedFile, actix_web::Error> {
+    tracing::info!("Serving manifest");
+    let filename = "manifest.json";
+    let path: PathBuf = ["static", "manifest", filename].iter().collect();
+
+    let file = match NamedFile::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             return Err(actix_web::error::ErrorInternalServerError(err));
         }
     };
@@ -182,16 +270,16 @@ pub async fn favicon() -> Result<NamedFile, actix_web::Error> {
 }
 
 #[get("/logomain")]
-#[instrument(name = "Serving logo", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving logo", level = "info", target = "Static Content")]
 pub async fn logomain() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving logo");
+    tracing::info!("Serving logo");
     let filename = "logomain.jpeg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
 
     let file = match NamedFile::open(path) {
         Ok(file) => file,
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             return Err(actix_web::error::ErrorInternalServerError(err));
         }
     };
@@ -200,17 +288,17 @@ pub async fn logomain() -> Result<NamedFile, actix_web::Error> {
 }
 
 #[get("/stylesheet")]
-#[instrument(name = "Serving stylesheet", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving stylesheet", level = "info", target = "Static Content")]
 pub async fn stylesheet() -> impl Responder {
-    info!("Serving stylesheet");
+    tracing::info!("Serving stylesheet");
     let file = include_str!("../../static/css/style.css");
     HttpResponse::Ok().content_type("text/css").body(file)
 }
 
 #[get("/style.css.map")]
-#[instrument(name = "Serving source map", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving source map", level = "info", target = "Static Content")]
 pub async fn source_map() -> impl Responder {
-    info!("Serving source map");
+    tracing::info!("Serving source map");
     let file = include_str!("../../static/css/style.css.map");
     HttpResponse::Ok()
         .content_type("application/json")
@@ -221,17 +309,17 @@ pub async fn source_map() -> impl Responder {
 #[instrument(
     name = "Serving htmx.min.js",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn htmx() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving htmx.min.js");
+    tracing::info!("Serving htmx.min.js");
 
     let filename = "htmx.min.js";
     let path: PathBuf = ["static", "assets", "htmx", filename].iter().collect();
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -241,33 +329,33 @@ pub async fn htmx() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving response-targets.js",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn response_targets() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving response-targets.js");
+    tracing::info!("Serving response-targets.js");
 
     let filename = "response-targets.js";
     let pash: PathBuf = ["static", "assets", "htmx", filename].iter().collect();
     match NamedFile::open(pash) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
 }
 
 #[get("/sse")]
-#[instrument(name = "Serving sse.js", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving sse.js", level = "info", target = "Static Content")]
 pub async fn sse() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving sse.js");
+    tracing::info!("Serving sse.js");
 
     let filename = "sse.js";
     let path: PathBuf = ["static", "assets", "htmx", filename].iter().collect();
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -277,10 +365,10 @@ pub async fn sse() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving action_script.js",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn action_script() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving action_script.js");
+    tracing::info!("Serving action_script.js");
 
     let filename = "action_script.js";
     let path: PathBuf = ["static", "js", filename].iter().collect();
@@ -288,7 +376,7 @@ pub async fn action_script() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -298,10 +386,10 @@ pub async fn action_script() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving prof_headshot.jpg",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving prof_headshot.jpg");
+    tracing::info!("Serving prof_headshot.jpg");
 
     let filename = "head_shot.png";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -309,7 +397,7 @@ pub async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -319,10 +407,10 @@ pub async fn prof_headshot() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving usmc_patrolling.jpg",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving usmc_patrolling.jpg");
+    tracing::info!("Serving usmc_patrolling.jpg");
 
     let filename = "usmc_patrolling.jpg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -330,7 +418,7 @@ pub async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -340,10 +428,10 @@ pub async fn usmc_patrolling() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving spinner.jpg",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn spinner() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving spinner.jpg");
+    tracing::info!("Serving spinner.jpg");
 
     let filename = "spinner.gif";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -351,16 +439,16 @@ pub async fn spinner() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
 }
 
 #[get("/github")]
-#[instrument(name = "Serving github.svg", level = "info", target = "portfolio_site")]
+#[instrument(name = "Serving github.svg", level = "info", target = "Static Content")]
 pub async fn github() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving github.webp");
+    tracing::info!("Serving github.webp");
 
     let filename = "github.webp";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -368,7 +456,7 @@ pub async fn github() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -378,10 +466,10 @@ pub async fn github() -> Result<NamedFile, actix_web::Error> {
 #[instrument(
     name = "Serving linkedin.svg",
     level = "info",
-    target = "portfolio_site"
+    target = "Static Content"
 )]
 pub async fn linkedin() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving linkedin.svg");
+    tracing::info!("Serving linkedin.svg");
 
     let filename = "linkedIn.svg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -389,7 +477,7 @@ pub async fn linkedin() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
@@ -402,7 +490,7 @@ pub async fn linkedin() -> Result<NamedFile, actix_web::Error> {
     target = "settings_icon"
 )]
 pub async fn settings_icon() -> Result<NamedFile, actix_web::Error> {
-    info!("Serving settings_icon");
+    tracing::info!("Serving settings_icon");
 
     let filename = "gears_001.jpg";
     let path: PathBuf = ["static", "imgs", filename].iter().collect();
@@ -410,7 +498,7 @@ pub async fn settings_icon() -> Result<NamedFile, actix_web::Error> {
     match NamedFile::open(path) {
         Ok(file) => Ok(file),
         Err(err) => {
-            error!("Error opening file -- {filename} -- : {err:#?}");
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }
