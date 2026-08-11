@@ -57,7 +57,7 @@ pub async fn index(
             tracing::error!("Unable to validate the user: {err:#?}");
             // return HttpResponse::InternalServerError().json(format!("{err:#?}"));
             let default_template = IndexTemplate {
-                user_email: format!("{err:#?}"),
+                user_email: String::from("Please login to create a post"),
                 ..Default::default()
             };
             let rendered = match default_template.render() {

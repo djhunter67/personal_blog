@@ -6,7 +6,7 @@ use askama::Template;
 use redis::{AsyncCommands, aio};
 use uuid::Uuid;
 
-use crate::{endpoints::login::LoginTemplate, personnel::users};
+use crate::{endpoints::templates::IndexTemplate, personnel::users};
 
 /// # Panics
 ///
@@ -41,8 +41,9 @@ pub async fn create_session(
         .expires(actix_web::cookie::time::OffsetDateTime::now_utc() + Duration::seconds(86400))
         .finish();
 
-    let template = LoginTemplate {
-        user_email: &user.get_email(),
+    let template = IndexTemplate {
+        user_email: user.get_email(),
+        is_logged_in: true,
         ..Default::default()
     };
 
