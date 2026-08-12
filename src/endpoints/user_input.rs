@@ -6,7 +6,10 @@ use actix_web::{
     web::{self, Data, Form},
 };
 use askama::Template;
-use mongodb::bson::{DateTime as BsonDateTime, doc};
+use mongodb::{
+    bson::{DateTime as BsonDateTime, doc},
+    options,
+};
 use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -564,8 +567,20 @@ pub async fn update_text(
     }
     .collection::<BlogPost>("BlogPosts");
 
+    let map = input.get_body().chars().map(|mut letter| {
+        if letter == '\n' {
+            letter = ' ';
+        }
+        letter
+    });
+    let mut stripped_body: String = map.collect();
+
+    if stripped_body.is_empty() {
+        stripped_body = input.get_body().to_string();
+    }
+
     tracing::warn!("The post id to search for: {}", input.get_post_id());
-    tracing::warn!("The body content to update with: {}", input.get_body());
+    tracing::warn!("The body content to update with: {}", stripped_body);
     // Find the latest journal entry for the authenticated user
     let filter = doc! {
         "_id": input.get_post_id(),
@@ -576,26 +591,26 @@ pub async fn update_text(
     let update_doc = doc! {
     "$set": doc! {
         "title": input.get_title(),
-        "body": input.get_body(),
+        "body": stripped_body,
         "author": input.get_author(),
         "date": BsonDateTime::now(),
     }
     };
 
-    // let options = FindOneAndUpdateOptions::builder()
-    //     .sort(doc! { "date": -1 }) // Sort by date in descending order
-    //     .return_document(ReturnDocument::After) // Return the updated document
-    //     .build();
+    let options = options::FindOneAndUpdateOptions::builder()
+        //     .sort(doc! { "date": -1 }) // Sort by date in descending order
+        .return_document(options::ReturnDocument::After) // Return the updated document
+        .build();
 
     let _entry: BlogPost = match journal_entries
         .find_one_and_update(filter, update_doc)
-        // .with_options(options)
+        .with_options(options)
         .await
     {
         Ok(Some(entry)) => {
             tracing::warn!("The results of the update: {entry:#?}");
 
-            let edit_template = JournalPostEdit::new(input);
+            let edit_template = JournalPostEdit::new(entry);
 
             let render = match edit_template.render() {
                 Ok(html) => html,
