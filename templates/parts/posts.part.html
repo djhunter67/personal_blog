@@ -13,26 +13,25 @@
 	{{ card.get_date() }}
       </h3>
     </div>      
-      <div
-	class="card__buttons"
-	>
-	<button
-	  hx-post="/v1/edit_submission"
-	  hx-target="#main__info_cards"
-	  hx-swap="outerHTML"
-	  hx-vals='{
-		   "title": "{{card.get_title()}}",
-		   "body": "{{ card.get_body().trim_end() }}",
-		   "author": "{{ card.get_author() }}",
-		   "user_id": "{{ card.get_user_id() }}",
-		   "_id": "{{ card.get_post_id() }}"
-		   }'
-	  type="button"
-	  >EDIT
-	</button>
-      </div>
+    <div
+      class="card__buttons"
+      >
+      <button
+	hx-post="/v1/edit_submission"
+	hx-target="#main__info_cards"
+	hx-swap="outerHTML"
+	hx-vals='{
+		 "title": "{{card.get_title()}}",
+		 "body": "{{ card.get_body().trim_end() }}",
+		 "author": "{{ card.get_author() }}",
+		 "user_id": "{{ card.get_user_id() }}",
+		 "_id": "{{ card.get_post_id() }}"
+		 }'
+	type="button"
+	>EDIT
+      </button>
+    </div>
   </div>
-
   {% endfor %}
 
   <div id="upload_response" style="grid-column: 1 / -1"></div>
