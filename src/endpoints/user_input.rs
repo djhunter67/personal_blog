@@ -1,15 +1,13 @@
+use std::str::FromStr;
 pub(crate) use std::{fmt::Display, fs::File};
 
 use actix_multipart::form::MultipartForm;
 use actix_web::{
-    HttpRequest, HttpResponse, delete, post,
+    HttpRequest, HttpResponse, delete, get, post,
     web::{self, Data, Form},
 };
 use askama::Template;
-use mongodb::{
-    bson::{DateTime as BsonDateTime, doc},
-    options::{FindOneAndUpdateOptions, ReturnDocument},
-};
+use mongodb::bson::{DateTime as BsonDateTime, doc};
 use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -22,6 +20,8 @@ use crate::{
         redis_conf::authenticated_user_id,
     },
 };
+
+type Oid = mongodb::bson::oid::ObjectId;
 
 /// # TODO
 ///
@@ -41,15 +41,22 @@ use crate::{
 /// Restore recently deleted posts
 /// View the data the application stores
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(default)]
 pub struct BlogPost {
     title: String,
     body: String,
     author: String,
+    #[serde(default)]
     user_id: String,
-    post_id: String,
+    #[serde(rename = "_id")]
+    post_id: Oid,
+    #[serde(default = "default_date")]
     date: BsonDateTime,
+    #[serde(default)]
     logged_in: bool,
+}
+
+fn default_date() -> BsonDateTime {
+    BsonDateTime::from_system_time(chrono::Utc::now().into())
 }
 
 impl BlogPost {
@@ -63,7 +70,7 @@ impl BlogPost {
         body: String,
         author: String,
         user_id: String,
-        post_id: String,
+        post_id: Oid,
         logged_in: bool,
     ) -> Self {
         Self {
@@ -183,13 +190,12 @@ impl BlogPost {
         self.logged_in
     }
 
-    #[must_use = "Set the post id"]
-    pub fn set_post_id(&mut self, post_id: String) {
-        self.post_id = post_id
+    pub const fn set_post_id(&mut self, post_id: Oid) {
+        self.post_id = post_id;
     }
 
     #[must_use]
-    pub fn get_post_id(&self) -> &str {
+    pub const fn get_post_id(&self) -> &Oid {
         &self.post_id
     }
 }
@@ -204,19 +210,19 @@ impl Display for BlogPost {
     }
 }
 
-impl Default for BlogPost {
-    fn default() -> Self {
-        Self {
-            title: String::new(),
-            body: String::new(),
-            author: String::new(),
-            user_id: String::new(),
-            post_id: String::new(),
-            logged_in: false,
-            date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
-        }
-    }
-}
+// impl Default for BlogPost {
+//     fn default() -> Self {
+//         Self {
+//             title: String::new(),
+//             body: String::new(),
+//             author: String::new(),
+//             user_id: String::new(),
+//             post_id: Oid::new(),
+//             logged_in: false,
+//             date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
+//         }
+//     }
+// }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct JournalDraftInput {
@@ -329,6 +335,7 @@ pub async fn submit_text(
 
     input.toggle_logged_in();
     input.set_user_id(user_oid.to_string());
+    input.set_post_id(Oid::new());
 
     let journal_entries = match mongo::establish_connection(&mongo_client).await {
         Ok(conn) => conn,
@@ -359,15 +366,22 @@ pub async fn submit_text(
             // }
 
             // All business for saving the post is done, now return a result
-            let oid: String = if let Some(str_oid) = oid.inserted_id.as_object_id() {
-                tracing::info!("Converting the post oid to a string");
-                str_oid.to_string()
-            } else {
-                tracing::error!("Unable to convert the post oid to a string");
-                String::new()
-            };
+            let oid: Oid = oid.inserted_id.as_object_id().map_or_else(
+                || {
+                    tracing::error!("Unable to convert the post oid to a string");
+                    Oid::from_str("no joy")
+                        .expect("failed to create oid upon failure to procure oid")
+                },
+                |str_oid| {
+                    tracing::info!("Oid string found: {str_oid:#?}");
+                    str_oid
+                },
+            );
 
-            input.post_id = oid;
+            // input.post_id = oid;
+            input.set_post_id(oid);
+
+            tracing::warn!("The post id has been set: {input:#?}");
             let blog_template = JournalPostEdit::new(input);
 
             let render = match blog_template.render() {
@@ -412,14 +426,16 @@ pub async fn submit_text(
     target = "Edit the Blog Post",
     skip(req, mongo_client, redis_client, input)
 )]
-#[post("/edit_submission")]
+#[get("/edit_submission")]
 pub async fn edit_submission(
     redis_client: Data<aio::ConnectionManager>,
     mongo_client: Data<mongodb::Client>,
-    Form(mut input): web::Form<BlogPost>,
+    web::Form(mut input): web::Form<BlogPost>,
     req: HttpRequest,
 ) -> HttpResponse {
     tracing::info!("Edit submission endpoint");
+
+    tracing::warn!("The blogpost to show: {input:#?}");
 
     let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
         Ok(user_oid) => user_oid,
@@ -472,6 +488,8 @@ pub async fn editor_submission(
 ) -> HttpResponse {
     tracing::info!("Edit submission endpoint");
 
+    tracing::warn!("The blogpost to pass to the editor: {input:#?}");
+
     let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
         Ok(user_oid) => user_oid,
         Err(err) => {
@@ -518,6 +536,8 @@ pub async fn update_text(
 ) -> HttpResponse {
     tracing::info!("Update text endpoint");
 
+    tracing::warn!("The BlogPost to modify: {input:#?}");
+
     let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
         Ok(user_oid) => user_oid,
         Err(err) => {
@@ -535,9 +555,10 @@ pub async fn update_text(
     }
     .collection::<BlogPost>("BlogPosts");
 
+    tracing::warn!("The post id to search for: {}", input.get_post_id());
     // Find the latest journal entry for the authenticated user
     let filter = doc! {
-        "user_id": user_oid.to_string(),
+        "_id": input.get_post_id(),
     };
     // Get the latest entry by sorting in descending order based on the creation timestamp
 
@@ -549,14 +570,14 @@ pub async fn update_text(
     }
     };
 
-    let options = FindOneAndUpdateOptions::builder()
-        .sort(doc! { "date": -1 }) // Sort by date in descending order
-        .return_document(ReturnDocument::After) // Return the updated document
-        .build();
+    // let options = FindOneAndUpdateOptions::builder()
+    //     .sort(doc! { "date": -1 }) // Sort by date in descending order
+    //     .return_document(ReturnDocument::After) // Return the updated document
+    //     .build();
 
     let entry: BlogPost = match journal_entries
         .find_one_and_update(filter, update_doc)
-        .with_options(options)
+        // .with_options(options)
         .await
     {
         Ok(Some(entry)) => {
@@ -565,7 +586,7 @@ pub async fn update_text(
             entry
         }
         Ok(None) => {
-            tracing::warn!(%user_oid, "No journal entry found for the user to update the posts");
+            tracing::error!(%user_oid, "No journal entry found for the user to update the posts");
             return HttpResponse::NotFound()
                 .body("No journal entry found for the user to update the post");
         }
@@ -727,9 +748,9 @@ pub async fn validate_user(
     tracing::info!("Creating the session key");
     let session_key = format!("session:{session_id}");
 
-    tracing::warn!("The cache-layer's session key: {session_key}");
+    // tracing::warn!("The cache-layer's session key: {session_key}");
 
-    tracing::info!("Searching for the session key: {session_key}");
+    tracing::info!("The session key to use to search: {session_key}");
     let user: String = match redis_client.as_ref().clone().get(session_key).await {
         Ok(result) => result,
         Err(err) => {

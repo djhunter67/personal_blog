@@ -2,7 +2,7 @@
   hx-post="/v1/update_text"
   hx-swap="innerHTML"
   hx-target="#main"
-  hx-trigger="click, keydown[ctrlKey && key=='Enter'] from:textarea"
+  hx-trigger="click from:button, keydown[ctrlKey && key=='Enter'] from:textarea"
   id="main__info_cards__journaler"
   >
   <input
@@ -20,7 +20,7 @@
     rows="9"
     required
     >{{ content.get_body() }}</textarea>
-  <input id="hidden_to_pass_the_post_oid" hidden name="post_oid" value="{{ content.get_post_oid()  }}">
+  <input id="hidden_to_pass_the_post_oid" hidden name="_id" value="{{ content.get_post_id()  }}">
   <button type="submit">Submit</button>
 </form>
 

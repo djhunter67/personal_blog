@@ -13,7 +13,6 @@ use super::user_input::BlogPost;
 #[template(path = "index.html")]
 pub struct IndexTemplate {
     pub title: String,
-
     pub content: Vec<BlogPost>,
     pub version: String,
     pub user_email: String,
