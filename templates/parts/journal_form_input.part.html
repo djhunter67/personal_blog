@@ -21,6 +21,7 @@
     required
     >{{ content.get_body() }}</textarea>
   <input id="hidden_to_pass_the_post_oid" hidden name="_id" value="{{ content.get_post_id()  }}">
+  <input id="hidden_to_pass_the_author" hidden name="author" value="{{ content.get_author()  }}">
   <button type="submit">Submit</button>
 </form>
 

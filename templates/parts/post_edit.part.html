@@ -29,9 +29,17 @@
     <button
       id="main__confirmation__edit"
       hx-post="/v1/editor_submission"
-      hx-vals='{"title": "{{content.get_title()}}", "body": "{{content.get_body()}}", "author": "{{content.get_author()}}", "_id": "{{content.get_post_id()}}"}'
+      hx-vals='{
+	       "title": "{{content.get_title()}}",
+	       "body": "{{content.get_body()}}",
+	       "author": "{{content.get_author()}}",
+	       "user_id": "{{ content.get_user_id() }}",
+	       "_id": "{{content.get_post_id()}}"
+	       }'
       hx-target="#main"
-      hx-swap="innerHTML">
+      hx-swap="innerHTML"
+      type="button"
+      >
       EDIT
     </button>
     <button

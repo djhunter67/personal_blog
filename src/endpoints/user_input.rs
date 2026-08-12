@@ -1,9 +1,8 @@
-use std::str::FromStr;
 pub(crate) use std::{fmt::Display, fs::File};
 
 use actix_multipart::form::MultipartForm;
 use actix_web::{
-    HttpRequest, HttpResponse, delete, get, post,
+    HttpRequest, HttpResponse, delete, post,
     web::{self, Data, Form},
 };
 use askama::Template;
@@ -48,7 +47,7 @@ pub struct BlogPost {
     #[serde(default)]
     user_id: String,
     #[serde(rename = "_id")]
-    post_id: Oid,
+    post_id: Option<Oid>,
     #[serde(default = "default_date")]
     date: BsonDateTime,
     #[serde(default)]
@@ -70,7 +69,7 @@ impl BlogPost {
         body: String,
         author: String,
         user_id: String,
-        post_id: Oid,
+        post_id: Option<Oid>,
         logged_in: bool,
     ) -> Self {
         Self {
@@ -190,13 +189,17 @@ impl BlogPost {
         self.logged_in
     }
 
-    pub const fn set_post_id(&mut self, post_id: Oid) {
+    pub const fn set_post_id(&mut self, post_id: Option<Oid>) {
         self.post_id = post_id;
     }
 
     #[must_use]
-    pub const fn get_post_id(&self) -> &Oid {
-        &self.post_id
+    pub fn get_post_id(&self) -> Oid {
+        if let Some(id) = self.post_id {
+            id
+        } else {
+            Oid::new()
+        }
     }
 }
 
@@ -335,7 +338,7 @@ pub async fn submit_text(
 
     input.toggle_logged_in();
     input.set_user_id(user_oid.to_string());
-    input.set_post_id(Oid::new());
+    input.set_post_id(Some(Oid::new()));
 
     let journal_entries = match mongo::establish_connection(&mongo_client).await {
         Ok(conn) => conn,
@@ -366,20 +369,20 @@ pub async fn submit_text(
             // }
 
             // All business for saving the post is done, now return a result
-            let oid: Oid = oid.inserted_id.as_object_id().map_or_else(
-                || {
-                    tracing::error!("Unable to convert the post oid to a string");
-                    Oid::from_str("no joy")
-                        .expect("failed to create oid upon failure to procure oid")
-                },
-                |str_oid| {
-                    tracing::info!("Oid string found: {str_oid:#?}");
-                    str_oid
-                },
-            );
+            // let oid: Oid = oid.inserted_id.as_object_id().map_or_else(
+            //     || {
+            //         tracing::error!("Unable to convert the post oid to a string");
+            //         Oid::from_str("no joy")
+            //             .expect("failed to create oid upon failure to procure oid")
+            //     },
+            //     |str_oid| {
+            //         tracing::info!("Oid string found: {str_oid:#?}");
+            //         str_oid
+            //     },
+            // );
 
             // input.post_id = oid;
-            input.set_post_id(oid);
+            input.set_post_id(oid.inserted_id.as_object_id());
 
             tracing::warn!("The post id has been set: {input:#?}");
             let blog_template = JournalPostEdit::new(input);
@@ -426,7 +429,7 @@ pub async fn submit_text(
     target = "Edit the Blog Post",
     skip(req, mongo_client, redis_client, input)
 )]
-#[get("/edit_submission")]
+#[post("/edit_submission")]
 pub async fn edit_submission(
     redis_client: Data<aio::ConnectionManager>,
     mongo_client: Data<mongodb::Client>,
@@ -556,6 +559,7 @@ pub async fn update_text(
     .collection::<BlogPost>("BlogPosts");
 
     tracing::warn!("The post id to search for: {}", input.get_post_id());
+    tracing::warn!("The body content to update with: {}", input.get_body());
     // Find the latest journal entry for the authenticated user
     let filter = doc! {
         "_id": input.get_post_id(),

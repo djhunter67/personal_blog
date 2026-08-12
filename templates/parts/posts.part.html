@@ -17,12 +17,12 @@
 	class="card__buttons"
 	>
 	<button
-	  hx-get="/v1/edit_submission"
+	  hx-post="/v1/edit_submission"
 	  hx-target="#main__info_cards"
 	  hx-swap="outerHTML"
 	  hx-vals='{
 		   "title": "{{ card.get_title() }}",
-		   "body": "{{ card.get_body().trim() }}",
+		   "body": "{{ card.get_body() }}",
 		   "author": "{{ card.get_author() }}",
 		   "user_id": "{{ card.get_user_id() }}",
 		   "_id": "{{ card.get_post_id() }}"
