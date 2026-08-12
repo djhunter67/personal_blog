@@ -1,18 +1,18 @@
 use actix_multipart::form::{MultipartForm, tempfile::TempFile, text::Text};
 use actix_web::{HttpRequest, HttpResponse, get, post, web::Data};
-use anyhow::Result;
 use askama::Template;
 use mongodb::{
     bson::{doc, oid},
-    options::UpdateModifications,
+    options::{self, UpdateModifications},
 };
 use redis::{AsyncCommands, aio};
 use tracing::instrument;
 
 use crate::{
+    endpoints::templates::IndexTemplate,
     models::{mongo, redis_conf::authenticated_user_id},
     personnel::users,
-    security::validate,
+    security::{passworder::PassWorder, validate},
 };
 
 #[derive(Template)]
@@ -137,6 +137,7 @@ pub async fn settings_change(
         );
 
         let img_bytes: f32 = img.size as f32 / (1024.0 * 1024.0);
+
         // limit the output to 2 decimal places
         tracing::warn!("Image bytes size: {:.2} MB", img_bytes);
     } else {
@@ -167,8 +168,8 @@ pub async fn settings_change(
 
     if let Some(new_email) = body.user_email.as_ref().map(|email| email.as_str()) {
         tracing::info!("Validating the new email: {new_email}");
-        // Validate the email is actually an email
 
+        // Validate the email is actually an email
         if validate::email(new_email) {
             tracing::info!("New email is valid!");
 
@@ -176,7 +177,21 @@ pub async fn settings_change(
         }
     }
 
-    HttpResponse::Ok().json("Update successful")
+    let index_template = IndexTemplate {
+        user_email: user_oid.to_string(),
+        is_logged_in: true,
+        ..Default::default()
+    };
+
+    match index_template.render() {
+        Ok(rend) => HttpResponse::Ok().body(rend),
+        Err(err) => {
+            tracing::error!("Unable to render the index template from settings update");
+            HttpResponse::InternalServerError().body(format!(
+                "Unable to render the index page defaults: {err:#?}"
+            ))
+        }
+    }
 }
 
 #[instrument(
@@ -189,19 +204,38 @@ async fn update_user_pw(
     pw: &str,
     mongo_client: &Data<mongodb::Client>,
     user_oid: &oid::ObjectId,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let mongo_conn = mongo::establish_connection(mongo_client).await?;
+
+    let passwdr: PassWorder = PassWorder::new(pw).encrypt().salt().pepper();
+    let (salt, _encrypted, _pep) = passwdr.deconstruct();
 
     let filter = doc! {
     "_id": user_oid,
     };
 
-    let mut user: users::Users = if let Some(user) = mongo_conn
+    // The exact data to be updated
+    let update_doc = doc! {
+    "$set": doc! {
+        "password_hash": passwdr.to_string(),
+        "password_salt": salt,
+    }
+    };
+
+    let options = options::FindOneAndUpdateOptions::builder()
+        //     .sort(doc! { "date": -1 }) // Sort by date in descending order
+        .return_document(options::ReturnDocument::After) // Return the updated document
+        .build();
+
+    let _user: users::Users = if let Some(user) = mongo_conn
         .collection::<users::Users>("Users")
-        .find_one(filter)
+        .find_one_and_update(filter, update_doc)
+        .with_options(options)
         .await?
     {
-        user
+        tracing::warn!("The user password was updated: {user:#?}");
+        // user
+        return Ok(());
     } else {
         tracing::error!("No user found when attempting to update the password");
         return Err(anyhow::Error::msg(
@@ -211,38 +245,53 @@ async fn update_user_pw(
 
     // let hash_pw: String = PassWorder::new(pw).encrypt().salt().pepper().to_string();
 
-    tracing::info!("Upadating the user password");
+    // tracing::info!("Upadating the user password");
     // Save the users::Users struct to the database to commit
-    user.set_pw(pw);
+    // user.set_pw(pw);
 
-    tracing::warn!("The new hashed pw: {}", user.get_pw());
+    // tracing::warn!("The new hashed pw: {}", user.get_pw());
 
-    Ok(())
+    // Ok(())
 }
 
 #[instrument(
     name = "User email change",
     level = "info",
     target = "Changing user email",
-    skip(user_email, mongo_client, user_oid)
+    skip(new_email, mongo_client, user_oid)
 )]
 async fn update_user_email(
-    user_email: &str,
+    new_email: &str,
     mongo_client: &Data<mongodb::Client>,
     user_oid: &oid::ObjectId,
-) -> Result<()> {
+) -> anyhow::Result<()> {
     let mongo_conn = mongo::establish_connection(mongo_client).await?;
 
     let filter = doc! {
     "_id": user_oid,
     };
 
-    let mut user: users::Users = if let Some(user) = mongo_conn
+    // The exact data to be updated
+    let update_doc = doc! {
+    "$set": doc! {
+        "email": new_email,
+    }
+    };
+
+    let options = options::FindOneAndUpdateOptions::builder()
+        //     .sort(doc! { "date": -1 }) // Sort by date in descending order
+        .return_document(options::ReturnDocument::After) // Return the updated document
+        .build();
+
+    let _user: users::Users = if let Some(user) = mongo_conn
         .collection::<users::Users>("Users")
-        .find_one(filter.clone())
+        .find_one_and_update(filter, update_doc)
+        .with_options(options)
         .await?
     {
-        user
+        tracing::warn!("Updated user data: {user:#?}");
+        // user
+        return Ok(());
     } else {
         tracing::error!("No user found when attempting to update the password");
         return Err(anyhow::Error::msg(
@@ -250,16 +299,16 @@ async fn update_user_email(
         ));
     };
 
-    user.set_email(user_email);
+    // user.set_email(new_email);
 
-    mongo_conn
-        .collection::<users::Users>("Users")
-        .update_one(filter, user)
-        .await?;
+    // mongo_conn
+    //     .collection::<users::Users>("Users")
+    //     .update_one(filter, user)
+    //     .await?;
 
     // tracing::warn!("The new user email: {}", user.get_email());
 
-    Ok(())
+    // Ok(())
 }
 
 impl From<users::Users> for UpdateModifications {

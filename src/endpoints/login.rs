@@ -71,8 +71,8 @@ pub async fn login_user(
     debug!("The user data entered: {:#?}", body.0);
 
     // Validate the user data entered
-    let user_email: &str = body.0.email.as_str();
-    let password: &str = body.0.password.as_str();
+    let user_email: &str = &body.0.email.clone();
+    // let password: &str = body.0.password.as_str();
 
     let filter = mongodb::bson::doc! {
     "email":  user_email
@@ -106,10 +106,10 @@ pub async fn login_user(
         // redundant Option to satisfy the compiler
         tracing::warn!("cache-hit: {json_data:#?}");
 
-        let json_result = users::Users::new(
-            String::from(user_email),
-            String::from(password),
-            String::new(),
+        let json_result: users::Users = users::Users::from(
+            body, // String::from(user_email),
+                 // String::from(password),
+                 // String::new(),
         );
 
         // json_result.set_pw(&json_result.get_pw());

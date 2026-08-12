@@ -151,10 +151,11 @@ $light-yellow: hsl(60, 100%, 90%);
 		justify-content: center;
 		flex-direction: column;
 		flex-wrap: wrap;
+		max-width: 337px;
 
 		h3 {
-		    
 		    text-align: center;
+		    text-wrap: wrap;
 		}
 	    }
 	}

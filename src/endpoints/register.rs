@@ -125,7 +125,7 @@ pub async fn register_user(
     }
     tracing::info!("Email checking and no matching email found");
 
-    let encrypted_pw: PassWorder = PassWorder::new(password).encrypt().salt(); //.pepper();
+    let encrypted_pw: PassWorder = PassWorder::new(password).encrypt().salt().pepper();
 
     let (salt, _pw, _pepper) = encrypted_pw.deconstruct();
 

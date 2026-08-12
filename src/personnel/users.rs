@@ -1,8 +1,13 @@
+use actix_web::web;
 use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use crate::{models::mongo, security::passworder};
+use crate::{
+    endpoints::login::LoginUser,
+    models::mongo,
+    security::passworder::{self},
+};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Users {
@@ -83,7 +88,10 @@ impl Users {
         tracing::debug!("The user passed in for the password comparison: {db_user:#?}");
         // let pw: (_, String, _) = PassWorder::new(db_user.get_pw()).deconstruct();
 
-        let encrypted_pw = passworder::PassWorder::new(&self.get_pw()).encrypt().salt();
+        let encrypted_pw = passworder::PassWorder::new(&self.get_pw())
+            .encrypt()
+            .salt()
+            .pepper();
         // .get();
         // .pepper()  // Cannot pepper until I redo registration
 
@@ -187,6 +195,15 @@ impl Users {
         tracing::warn!("The user returned: {user:#?}");
 
         Ok(self.compare_pw(&user))
+    }
+}
+
+impl From<web::Form<LoginUser>> for Users {
+    fn from(value: web::Form<LoginUser>) -> Self {
+        // let pwdr: PassWorder = PassWorder::new(&value.password).encrypt().salt().pepper();
+        // let (salt, pw, _pep) = pwdr.deconstruct();
+        // Self::new(value.email.clone(), pw, salt)
+        Self::new(value.email.clone(), value.password.clone(), String::new())
     }
 }
 

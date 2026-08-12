@@ -45,8 +45,16 @@
     <button
       id="main__confirmation__delete"
       hx-delete="/v1/delete_submission"
+      hx-vals='{
+	       "title": "{{content.get_title()}}",
+	       "body": "{{content.get_body()}}",
+	       "author": "{{content.get_author()}}",
+	       "user_id": "{{ content.get_user_id() }}",
+	       "_id": "{{content.get_post_id()}}"
+	       }'
       hx-target="#main"
       hx-swap="outerHTML"
+      hx-confirm="Are you sure?"
       >
       DELETE
     </button>

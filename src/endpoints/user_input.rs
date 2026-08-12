@@ -681,6 +681,7 @@ pub async fn delete_submission(
     req: HttpRequest,
     mongo_client: Data<mongodb::Client>,
     redis_client: Data<aio::ConnectionManager>,
+    web::Query(input): web::Query<BlogPost>,
 ) -> HttpResponse {
     tracing::info!("Delete submission endpoint");
 
@@ -702,13 +703,10 @@ pub async fn delete_submission(
     .collection::<BlogPost>("BlogPosts");
 
     let filter = doc! {
-    "user_id": user_oid.to_string()
-    };
-    let sort = doc! {
-    "date": -1
+    "_id": input.get_post_id()
     };
 
-    match journal_entries.find_one_and_delete(filter).sort(sort).await {
+    match journal_entries.find_one_and_delete(filter).await {
         Ok(deleted_entry) => {
             tracing::warn!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
             let index_template = Confirmation::new(

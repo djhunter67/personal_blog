@@ -31,24 +31,13 @@ pub async fn logout(
         ));
     };
 
-    let cache_key = format!("session:{session_id}");
-    let _: () = match redis_client
-        .as_ref()
-        .clone()
-        .del::<String, ()>(cache_key)
-        .await
-    {
-        Ok(()) => {
-            tracing::info!("Successfully removed the session key");
-        }
+    match remove_session(redis_client, &session_id).await {
+        Ok(()) => tracing::info!("Session key removed"),
         Err(err) => {
-            tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
-            return HttpResponse::InternalServerError().body(format!(
-                "Unable to delete the session data from the cache layer: {err:#?}"
-            ));
+            tracing::error!("The session key was not found or removed: {err:#?}");
+            return HttpResponse::InternalServerError().body("{err:#?}");
         }
-    };
-
+    }
     let index_template =
         IndexTemplate::new(vec![], "Please login to create a journal entry", false);
 
@@ -57,4 +46,38 @@ pub async fn logout(
             .render()
             .expect("Failed to render the home page"),
     )
+}
+
+/// # Errors
+///
+///    - This function errors if the cache layer is unavailable
+///    - This function errors if the session key is not found
+#[instrument(
+    name = "Remove the session key",
+    level = "info",
+    target = "Session keys business",
+    skip(redis_client)
+)]
+pub async fn remove_session(
+    redis_client: Data<aio::ConnectionManager>,
+    session_id: &str,
+) -> anyhow::Result<()> {
+    let cache_key = format!("session:{session_id}");
+    match redis_client
+        .as_ref()
+        .clone()
+        .del::<String, ()>(cache_key)
+        .await
+    {
+        Ok(()) => {
+            tracing::info!("Successfully removed the session key");
+            Ok(())
+        }
+        Err(err) => {
+            tracing::error!("Unable to delete the session data from the cache-layer: {err:#?}");
+            Err(anyhow::Error::msg(format!(
+                "Unable to delete the session data from the cache layer: {err:#?}",
+            )))
+        }
+    }
 }

@@ -9,7 +9,7 @@ use super::user_input::BlogPost;
 /// # TODO
 ///
 /// Dark Theme
-#[derive(Template, Default)]
+#[derive(Template)]
 #[template(path = "index.html")]
 pub struct IndexTemplate {
     pub title: String,
@@ -17,6 +17,22 @@ pub struct IndexTemplate {
     pub version: String,
     pub user_email: String,
     pub is_logged_in: bool,
+}
+
+fn default_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+impl Default for IndexTemplate {
+    fn default() -> Self {
+        Self {
+            title: String::from("Home"),
+            content: Vec::default(),
+            version: default_version(),
+            user_email: String::new(),
+            is_logged_in: false,
+        }
+    }
 }
 
 impl IndexTemplate {
@@ -126,7 +142,8 @@ pub struct Confirmation {
 }
 
 impl Confirmation {
-    pub fn new(header_message: String, body_message: String) -> Self {
+    #[must_use]
+    pub const fn new(header_message: String, body_message: String) -> Self {
         Self {
             header_message,
             body_message,
