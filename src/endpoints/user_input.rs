@@ -575,7 +575,9 @@ pub async fn update_text(
     // The exact data to be updated
     let update_doc = doc! {
     "$set": doc! {
+        "title": input.get_title(),
         "body": input.get_body(),
+        "author": input.get_author(),
         "date": BsonDateTime::now(),
     }
     };
@@ -585,15 +587,31 @@ pub async fn update_text(
     //     .return_document(ReturnDocument::After) // Return the updated document
     //     .build();
 
-    let entry: BlogPost = match journal_entries
+    let _entry: BlogPost = match journal_entries
         .find_one_and_update(filter, update_doc)
         // .with_options(options)
         .await
     {
         Ok(Some(entry)) => {
-            tracing::warn!("The results of the upadte: {entry:#?}");
-            // Some(entry);
-            entry
+            tracing::warn!("The results of the update: {entry:#?}");
+
+            let edit_template = JournalPostEdit::new(input);
+
+            let render = match edit_template.render() {
+                Ok(html) => html,
+                Err(err) => {
+                    tracing::error!(
+                        ?err,
+                        %user_oid,
+                        "Entry retrieved but rendering failed"
+                    );
+                    return HttpResponse::InternalServerError()
+                        .body("Entry retrieved but rendering failed.");
+                }
+            };
+
+            return HttpResponse::Ok().body(render);
+            // entry
         }
         Ok(None) => {
             tracing::error!(%user_oid, "No journal entry found for the user to update the posts");
@@ -632,23 +650,6 @@ pub async fn update_text(
     //             .body("Unable to retrieve the updated journal entry");
     //     }
     // };
-
-    let edit_template = JournalPostEdit::new(entry);
-
-    let render = match edit_template.render() {
-        Ok(html) => html,
-        Err(err) => {
-            tracing::error!(
-                ?err,
-                %user_oid,
-                "Entry retrieved but rendering failed"
-            );
-            return HttpResponse::InternalServerError()
-                .body("Entry retrieved but rendering failed.");
-        }
-    };
-
-    HttpResponse::Ok().body(render)
 }
 
 /// Delete the most immediately posted post from the user
