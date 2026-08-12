@@ -92,6 +92,7 @@ async fn run(
                     .service(templates::icon_192)
                     .service(templates::icon_512)
                     .service(templates::icon_large)
+                    .service(templates::link_preview)
                     .service(templates::manifest)
                     .service(templates::logomain)
                     .service(templates::usmc_patrolling)

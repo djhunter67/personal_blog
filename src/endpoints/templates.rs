@@ -263,6 +263,28 @@ pub async fn icon_large() -> Result<NamedFile, actix_web::Error> {
     Ok(file)
 }
 
+#[get("/link_preview")]
+#[instrument(
+    name = "Serving the icon_large",
+    level = "info",
+    target = "Static Content"
+)]
+pub async fn link_preview() -> Result<NamedFile, actix_web::Error> {
+    tracing::info!("Serving the link preview");
+    let filename = "icon_1200x627.png";
+    let path: PathBuf = ["static", "imgs", filename].iter().collect();
+
+    let file = match NamedFile::open(path) {
+        Ok(file) => file,
+        Err(err) => {
+            tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            return Err(actix_web::error::ErrorInternalServerError(err));
+        }
+    };
+
+    Ok(file)
+}
+
 #[get("/manifest.webmanifest")]
 #[instrument(
     name = "Serving the manifest",
