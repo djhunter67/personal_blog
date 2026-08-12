@@ -145,7 +145,11 @@ impl BlogPost {
 
         let year = month_date_year.split_once('-').map_or("", |(y, _)| y);
         // tracing::info!("Year: {}", year);
-        let day = month_date_year.split_once('-').map_or("", |(_, d)| d);
+        let day = month_date_year.split_once('-').map_or("", |(_, d)| {
+            d.split('-')
+                .next_back()
+                .expect("day timestamp parsing issue")
+        });
         // tracing::info!("Day: {}", day);
 
         let mut time = time
@@ -439,6 +443,8 @@ pub async fn edit_submission(
     tracing::info!("Edit submission endpoint");
 
     tracing::warn!("The blogpost to show: {input:#?}");
+
+    // let trim_newlines = input.get_body().trim()
 
     let user_oid = match authenticated_user_id(&req, &mongo_client, &redis_client).await {
         Ok(user_oid) => user_oid,
