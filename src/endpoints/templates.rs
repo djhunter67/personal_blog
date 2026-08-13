@@ -95,28 +95,14 @@ impl IndexTemplate {
         */
 }
 
-#[derive(Template, Default)]
-#[template(path = "parts/posts.part.html")]
-pub struct JournalFormTemplate {
-    content: Vec<BlogPost>,
-}
-
-impl JournalFormTemplate {
-    #[must_use]
-    pub const fn new(content: Vec<BlogPost>) -> Self {
-        Self { content }
-    }
-}
-
 #[derive(Template)]
-#[template(path = "parts/post_edit.part.html")]
-pub struct JournalPostEdit {
+#[template(path = "parts/indiv_post.html")]
+pub struct IndivPost {
     content: BlogPost,
 }
 
-impl JournalPostEdit {
-    #[must_use = "This function is used to allow a user to edit their post"]
-    pub const fn new(content: BlogPost) -> Self {
+impl IndivPost {
+    pub fn new(content: BlogPost) -> Self {
         Self { content }
     }
 }

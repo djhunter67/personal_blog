@@ -166,19 +166,13 @@ $light-yellow: hsl(60, 100%, 90%);
     @include meta.load-css("_registration");
     @include meta.load-css("_error");
     @include meta.load-css("_settings");
+    @include meta.load-css("_indiv_post");
     @include meta.load-css("_confirmation");
 }
 
 #info_buttons {
     background-color: white;
 }
-
-// @media (max-width: 844px) {
-//     #template_pages #top {
-// 	display: flex;
-// 	flex-direction: column;
-//     }
-// }
 
 // implement a media query for mobile devices with a max-width of 600px
 @media (max-width: 600px) {

@@ -42,7 +42,7 @@ pub async fn index(
     } else {
         tracing::error!("User cookie not found: {:#?}", req.connection_info());
 
-        let var_name = IndexTemplate::new(vec![], "", false);
+        let var_name = IndexTemplate::new(vec![], "Login to create a journal entry.", false);
 
         let rendered = var_name.render().expect("Failed to render template");
 

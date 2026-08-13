@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::{Confirmation, JournalPostEdit, JournalPostEditor},
+    endpoints::templates::{IndexTemplate, IndivPost, JournalPostEditor},
     images::ImageUpload,
     models::{
         mongo::{self, JournalDraft},
@@ -392,7 +392,7 @@ pub async fn submit_text(
             input.set_post_id(oid.inserted_id.as_object_id());
 
             tracing::warn!("The post id has been set: {input:#?}");
-            let blog_template = JournalPostEdit::new(input);
+            let blog_template = IndivPost::new(input);
 
             let render = match blog_template.render() {
                 Ok(html) => html,
@@ -460,7 +460,7 @@ pub async fn edit_submission(
     input.toggle_logged_in();
     input.set_user_id(user_oid.to_string());
 
-    let edit_template = JournalPostEdit::new(input);
+    let edit_template = IndivPost::new(input);
 
     let render = match edit_template.render() {
         Ok(html) => html,
@@ -567,6 +567,7 @@ pub async fn update_text(
     }
     .collection::<BlogPost>("BlogPosts");
 
+    // Workaround for HTMX error that doesn't parse newlines
     let map = input.get_body().chars().map(|mut letter| {
         if letter == '\n' {
             letter = ' ';
@@ -585,7 +586,6 @@ pub async fn update_text(
     let filter = doc! {
         "_id": input.get_post_id(),
     };
-    // Get the latest entry by sorting in descending order based on the creation timestamp
 
     // The exact data to be updated
     let update_doc = doc! {
@@ -610,7 +610,7 @@ pub async fn update_text(
         Ok(Some(entry)) => {
             tracing::warn!("The results of the update: {entry:#?}");
 
-            let edit_template = JournalPostEdit::new(entry);
+            let edit_template = IndivPost::new(entry);
 
             let render = match edit_template.render() {
                 Ok(html) => html,
@@ -709,10 +709,44 @@ pub async fn delete_submission(
     match journal_entries.find_one_and_delete(filter).await {
         Ok(deleted_entry) => {
             tracing::warn!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
-            let index_template = Confirmation::new(
-                String::from("Delete Successful"),
-                format!("The deleted document: {deleted_entry:#?}"),
-            );
+
+            // let filter = mongodb::bson::doc! { "user_id": deleted_entry.expect("unable to delete").get_user_id() };
+            // let mut blog_post: Vec<BlogPost> = Vec::new();
+            ////////////////////////////////////////////////////////////////////////////////////
+            // match journal_entries.find(filter).await {				      //
+            //     Ok(mut user_cursor) => {						      //
+            //         tracing::info!("User found!");					      //
+            // 										      //
+            //         while let Some(result) = user_cursor.next().await {		      //
+            //             match result {						      //
+            //                 Ok(document) => {						      //
+            //                     blog_post.push(document);				      //
+            //                 }							      //
+            //                 Err(err) => {						      //
+            //                     tracing::error!("Error retrieving document: {err:#?}");    //
+            //                     return HttpResponse::InternalServerError()		      //
+            //                         .json(format!("Error retrieving document: {err:#?}")); //
+            //                 }							      //
+            //             }								      //
+            //         }								      //
+            // 										      //
+            //         tracing::warn!("Found {} number of posts", blog_post.len());	      //
+            //     }									      //
+            // 										      //
+            //     Err(err) => {								      //
+            //         tracing::error!("Error accessing the database: {err:#?}");	      //
+            //         return HttpResponse::InternalServerError().json(format!(		      //
+            //             "Unable to acquire the database connection: {err:#?}"	      //
+            //         ));								      //
+            //     }									      //
+            // }									      //
+            ////////////////////////////////////////////////////////////////////////////////////
+
+            let index_template = IndexTemplate {
+                user_email: deleted_entry.expect("Unable to delete").author,
+                is_logged_in: true,
+                ..Default::default()
+            };
 
             let render = match index_template.render() {
                 Ok(render) => render,

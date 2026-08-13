@@ -69,7 +69,7 @@ pub async fn register_user(
     body: web::Form<RegisterUser>,
 ) -> HttpResponse {
     // Validate the user data entered
-    let email: String = String::from(&body.0.email);
+    let email: String = String::from(&body.0.email).to_lowercase();
     let password: &str = &body.0.password;
     let password_2: &str = &body.0.password_2;
 
@@ -121,7 +121,8 @@ pub async fn register_user(
 
     if let Some(_data) = result {
         tracing::error!("Email already exists");
-        return HttpResponse::Conflict().body("Email already exists");
+        // return HttpResponse::Conflict().body("Email already exists");
+        return HttpResponse::Ok().body("Email already exists");
     }
     tracing::info!("Email checking and no matching email found");
 
