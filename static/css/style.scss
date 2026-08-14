@@ -3,7 +3,9 @@
 *::before,
 *::after {
     box-sizing: border-box;
+    // background-color: darkgray;
     // outline: 1px solid red;  // Debugging overflow issues
+    
 }
 
 // * {
@@ -12,8 +14,14 @@
 
 body {
     font-family: 'Times New Roman', Times, serif;
-    width: 100%;
-    height: fit-content;    
+    // width: 100dvw;
+    // min-height: 100%;
+    // overflow-x: hidden;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
 }
 
 $blue: hsl(200, 100%, 50%);
@@ -34,6 +42,10 @@ $light-yellow: hsl(60, 100%, 90%);
     background-color: $black;
     justify-content: center;
     overflow-x: hidden;
+    // min-height: 100%;
+    height: fit-content;
+    width: 100%;
+    margin: auto;
 
     &__top {	
 	grid-column: 1 / -1;
@@ -168,6 +180,7 @@ $light-yellow: hsl(60, 100%, 90%);
     @include meta.load-css("_settings");
     @include meta.load-css("_indiv_post");
     @include meta.load-css("_confirmation");
+    @include meta.load-css("_user_input");
 }
 
 #info_buttons {
@@ -187,6 +200,7 @@ $light-yellow: hsl(60, 100%, 90%);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	width: 99%;
 	}
 
 	#template_pages__top__nav {

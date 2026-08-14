@@ -16,47 +16,47 @@
     </div>
   </div>
 </section>
-  <aside id="main__info_cards__confirmation">
-    <button
-      id="main__confirmation__submit"
-      hx-get="/"
-      hx-target="#template_pages"
-      hx-swap="outerHTML"
-      hx-trigger="click"
-      hx-target-error="#error_template">
-      CONFIRM
-    </button>
-    <button
-      id="main__confirmation__edit"
-      hx-post="/v1/editor_submission"
-      hx-vals='{
-	       "title": "{{content.get_title()}}",
-	       "body": "{{content.get_body()}}",
-	       "author": "{{content.get_author()}}",
-	       "user_id": "{{ content.get_user_id() }}",
-	       "_id": "{{content.get_post_id()}}"
-	       }'
-      hx-target="#main"
-      hx-swap="innerHTML"
-      type="button"
-      >
-      EDIT
-    </button>
-    <button
-      id="main__confirmation__delete"
-      hx-delete="/v1/delete_submission"
-      hx-vals='{
-	       "title": "{{content.get_title()}}",
-	       "body": "{{content.get_body()}}",
-	       "author": "{{content.get_author()}}",
-	       "user_id": "{{ content.get_user_id() }}",
-	       "_id": "{{content.get_post_id()}}"
-	       }'
-      hx-target="#template_pages"
-      hx-swap="outerHTML"
-      hx-confirm="Are you sure?"
-      >
-      DELETE
-    </button>
-  </aside>
+<aside id="main__info_cards__confirmation">
+  <button
+    id="main__confirmation__submit"
+    hx-get="/"
+    hx-target="#template_pages"
+    hx-swap="outerHTML"
+    hx-trigger="click"
+    hx-target-error="#error_template">
+    CONFIRM
+  </button>
+  <button
+    id="main__confirmation__edit"
+    hx-post="/v1/editor_submission"
+    hx-vals='{
+	     "title": "{{content.get_title()}}",
+	     "body": "{{content.get_body()}}",
+	     "author": "{{content.get_author()}}",
+	     "user_id": "{{ content.get_user_id() }}",
+	     "_id": "{{content.get_post_id()}}"
+	     }'
+    hx-target="#main"
+    hx-swap="innerHTML"
+    type="button"
+    >
+    EDIT
+  </button>
+  <button
+    id="main__confirmation__delete"
+    hx-delete="/v1/delete_submission"
+    hx-vals='{
+	     "title": "{{content.get_title()}}",
+	     "body": "{{content.get_body()}}",
+	     "author": "{{content.get_author()}}",
+	     "user_id": "{{ content.get_user_id() }}",
+	     "_id": "{{content.get_post_id()}}"
+	     }'
+    hx-target="#template_pages"
+    hx-swap="outerHTML"
+    hx-confirm="Are you sure?"
+    >
+    DELETE
+  </button>
+</aside>
 

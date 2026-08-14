@@ -6,6 +6,7 @@ use actix_web::{
     web::{self, Data, Form},
 };
 use askama::Template;
+use futures::StreamExt;
 use mongodb::{
     bson::{DateTime as BsonDateTime, doc},
     options,
@@ -202,11 +203,7 @@ impl BlogPost {
 
     #[must_use]
     pub fn get_post_id(&self) -> Oid {
-        if let Some(id) = self.post_id {
-            id
-        } else {
-            Oid::new()
-        }
+        self.post_id.unwrap_or_default()
     }
 }
 
@@ -219,20 +216,6 @@ impl Display for BlogPost {
         )
     }
 }
-
-// impl Default for BlogPost {
-//     fn default() -> Self {
-//         Self {
-//             title: String::new(),
-//             body: String::new(),
-//             author: String::new(),
-//             user_id: String::new(),
-//             post_id: Oid::new(),
-//             logged_in: false,
-//             date: BsonDateTime::from_system_time(chrono::Utc::now().into()),
-//         }
-//     }
-// }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct JournalDraftInput {
@@ -700,7 +683,7 @@ pub async fn delete_submission(
             return HttpResponse::InternalServerError().finish();
         }
     }
-    .collection::<BlogPost>("BlogPosts");
+    .collection::<BlogPost>(&BlogPost::to_name());
 
     let filter = doc! {
     "_id": input.get_post_id()
@@ -710,41 +693,43 @@ pub async fn delete_submission(
         Ok(deleted_entry) => {
             tracing::warn!(%user_oid, "Deleted journal entry: {deleted_entry:#?}");
 
-            // let filter = mongodb::bson::doc! { "user_id": deleted_entry.expect("unable to delete").get_user_id() };
-            // let mut blog_post: Vec<BlogPost> = Vec::new();
-            ////////////////////////////////////////////////////////////////////////////////////
-            // match journal_entries.find(filter).await {				      //
-            //     Ok(mut user_cursor) => {						      //
-            //         tracing::info!("User found!");					      //
-            // 										      //
-            //         while let Some(result) = user_cursor.next().await {		      //
-            //             match result {						      //
-            //                 Ok(document) => {						      //
-            //                     blog_post.push(document);				      //
-            //                 }							      //
-            //                 Err(err) => {						      //
-            //                     tracing::error!("Error retrieving document: {err:#?}");    //
-            //                     return HttpResponse::InternalServerError()		      //
-            //                         .json(format!("Error retrieving document: {err:#?}")); //
-            //                 }							      //
-            //             }								      //
-            //         }								      //
-            // 										      //
-            //         tracing::warn!("Found {} number of posts", blog_post.len());	      //
-            //     }									      //
-            // 										      //
-            //     Err(err) => {								      //
-            //         tracing::error!("Error accessing the database: {err:#?}");	      //
-            //         return HttpResponse::InternalServerError().json(format!(		      //
-            //             "Unable to acquire the database connection: {err:#?}"	      //
-            //         ));								      //
-            //     }									      //
-            // }									      //
-            ////////////////////////////////////////////////////////////////////////////////////
+            let filter = mongodb::bson::doc! { "user_id": deleted_entry.as_ref().expect("unable to delete").get_user_id() };
+            let mut blog_post: Vec<BlogPost> = Vec::new();
+
+            match journal_entries.find(filter).await {
+                //
+                Ok(mut user_cursor) => {
+                    tracing::info!("User found!"); //
+                    //
+                    while let Some(result) = user_cursor.next().await {
+                        match result {
+                            Ok(document) => {
+                                blog_post.push(document); //
+                            }
+                            Err(err) => {
+                                tracing::error!("Error retrieving document: {err:#?}");
+                                return HttpResponse::InternalServerError()
+                                    .json(format!("Error retrieving document: {err:#?}"));
+                            }
+                        }
+                    }
+
+                    tracing::warn!("Found {} number of posts", blog_post.len());
+                }
+
+                Err(err) => {
+                    tracing::error!("Error accessing the database: {err:#?}"); //
+                    return HttpResponse::InternalServerError().json(format!(
+                        //
+                        "Unable to acquire the database connection: {err:#?}" //
+                    )); //
+                } //
+            } //
 
             let index_template = IndexTemplate {
-                user_email: deleted_entry.expect("Unable to delete").author,
+                user_email: String::from(deleted_entry.expect("Unable to delete").get_author()),
                 is_logged_in: true,
+                content: blog_post,
                 ..Default::default()
             };
 
@@ -1097,3 +1082,55 @@ pub async fn find_active_draft(
 //         }
 //     }
 // }
+
+pub async fn get_all_posts(
+    mongo_client: &Data<mongodb::Client>,
+    user_oid: Oid,
+) -> anyhow::Result<Vec<BlogPost>> {
+    let db: mongodb::Collection<BlogPost> =
+        match mongo::establish_connection(&mongo_client).await {
+            Ok(collection) => collection,
+            Err(err) => {
+                tracing::error!("Error accessing the database: {err:#?}");
+                return Err(anyhow::Error::msg(format!(
+                    "Error accessing the database: {err:#?}"
+                )));
+            }
+        }
+        .collection::<BlogPost>(&BlogPost::to_name());
+
+    let filter = mongodb::bson::doc! { "user_id": user_oid.to_string() };
+    tracing::warn!("The id to check against: {}", user_oid.to_string());
+    let mut blog_post: Vec<BlogPost> = vec![];
+
+    // Each user can have more than one blog post, so we need to find all of them
+    match db.find(filter).await {
+        Ok(mut user_cursor) => {
+            tracing::info!("User found!");
+
+            while let Some(result) = user_cursor.next().await {
+                match result {
+                    Ok(document) => {
+                        blog_post.push(document);
+                    }
+                    Err(err) => {
+                        tracing::error!("Error retrieving document: {err:#?}");
+                        return Err(anyhow::Error::msg(format!(
+                            "Error retrieving document: {err:#?}"
+                        )));
+                    }
+                }
+            }
+
+            tracing::warn!("Found {} number of posts", blog_post.len());
+            Ok(blog_post)
+        }
+
+        Err(err) => {
+            tracing::error!("Error accessing the database: {err:#?}");
+            return Err(anyhow::Error::msg(format!(
+                "Error accessing the database: {err:#?}"
+            )));
+        }
+    }
+}

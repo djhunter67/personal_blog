@@ -3,6 +3,7 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
+use mongodb::bson::oid;
 use redis::{AsyncCommands, aio};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
@@ -92,29 +93,17 @@ pub async fn login_user(
     //     };
 
     // Get the user's key from when the user registered
-    let cached_user: Option<String> = match redis_client.as_ref().clone().get(cache_key).await {
-        Ok(cached_user) => Some(cached_user),
+    let cached_user: String = match redis_client.as_ref().clone().get(cache_key).await {
+        Ok(cached_user) => cached_user,
         Err(err) => {
             tracing::warn!("No registration keys detected: {err}");
-            None
+            String::new()
         }
     };
 
     tracing::warn!("The cached information to check against: {cached_user:#?}");
 
-    let user_auth: users::Users = if let Some(json_data) = cached_user {
-        // redundant Option to satisfy the compiler
-        tracing::warn!("cache-hit: {json_data:#?}");
-
-        let json_result: users::Users = users::Users::from(
-            body, // String::from(user_email),
-                 // String::from(password),
-                 // String::new(),
-        );
-
-        // json_result.set_pw(&json_result.get_pw());
-        json_result
-    } else {
+    let user_auth: users::Users = if cached_user.is_empty() {
         // This case is if there is no session key returned from the browser
         // TODO: Change this from an error to a warn
         tracing::error!("cache-miss");
@@ -129,6 +118,13 @@ pub async fn login_user(
                 users::Users::default()
             }
         }
+    } else {
+        tracing::warn!("cache-hit: {cached_user:#?}");
+
+        let json_result: users::Users = users::Users::from(body);
+
+        // json_result.set_pw(&json_result.get_pw());
+        json_result
     };
 
     if let Ok(authed) = user_auth
@@ -137,7 +133,14 @@ pub async fn login_user(
         && authed
     {
         tracing::warn!("PASSWORD VERIFIED! -> True");
-        return create_session(&user_auth, redis_client.as_ref().clone()).await;
+        let oid: oid::ObjectId = serde_json::from_str(&cached_user).unwrap_or_default();
+        return create_session(
+            oid,
+            &user_auth,
+            redis_client.as_ref().clone(),
+            &mongo_client,
+        )
+        .await;
     }
 
     // THIS RETURN VAL IS TEMPORARY
@@ -146,11 +149,12 @@ pub async fn login_user(
         user_email: format!("Invalid user entered credentials: {user_email}"),
         ..Default::default()
     };
-    let rendered = match default_template.render() {
-        Ok(template) => template,
-        Err(err) => return HttpResponse::InternalServerError().json(format!("{err:#?}")),
-    };
-    HttpResponse::Ok().body(rendered)
+
+    let render = default_template
+        .render()
+        .expect("The default render failed");
+
+    HttpResponse::Ok().body(render)
 }
 
 async fn cache_miss(

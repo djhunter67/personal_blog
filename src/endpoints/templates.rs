@@ -4,6 +4,8 @@ use askama::Template;
 use std::path::PathBuf;
 use tracing::instrument;
 
+use crate::personnel::users;
+
 use super::user_input::BlogPost;
 
 /// # TODO
@@ -103,6 +105,17 @@ pub struct IndivPost {
 
 impl IndivPost {
     pub fn new(content: BlogPost) -> Self {
+        Self { content }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "parts/journal_form.part.html")]
+pub struct IndivInput {
+    content: users::Users,
+}
+impl IndivInput {
+    pub fn new(content: users::Users) -> Self {
         Self { content }
     }
 }

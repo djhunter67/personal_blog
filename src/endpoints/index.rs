@@ -1,8 +1,12 @@
 use std::task::Poll;
 
 use crate::{
-    endpoints::user_input::BlogPost,
-    models::{mongo, redis_conf::authenticated_user_id},
+    endpoints::{
+        templates::IndivInput,
+        user_input::{self, BlogPost},
+    },
+    models::redis_conf::authenticated_user_id,
+    personnel::users,
 };
 
 use super::templates::IndexTemplate;
@@ -15,7 +19,7 @@ use actix_web::{
     web::{self, Data},
 };
 use askama::Template;
-use futures::{StreamExt, stream};
+use futures::stream;
 use redis::{AsyncCommands, aio};
 use tracing::instrument;
 
@@ -82,71 +86,57 @@ pub async fn index(
     };
 
     tracing::warn!("The session id: {session_key}");
-    let mut blog_post: Vec<BlogPost> = Vec::new();
-    match user.clone() {
-        None => {
-            tracing::warn!("User is not logged in: {user:#?}");
-            let var_name =
-                IndexTemplate::new(blog_post, "Please login to create a journal entry", false);
+    let blog_post: Vec<BlogPost> = match user_input::get_all_posts(&mongo_client, oid).await {
+        Ok(posts) => posts,
+        Err(err) => {
+            tracing::error!("Unable to procure the users posts: {err:#?}");
+            let default_index = IndexTemplate {
+                user_email: format!("Unable to procure your posts: {err:#?}"),
+                is_logged_in: true,
+                ..Default::default()
+            };
 
-            let rendered = var_name.render().expect("Failed to render template");
-            HttpResponse::Ok().body(rendered)
+            return HttpResponse::Ok().body(default_index.render().unwrap_or_default());
         }
-        Some(email) => {
-            // Get the previous blog posts from the database
-            let db: mongodb::Collection<BlogPost> =
-                match mongo::establish_connection(&mongo_client).await {
-                    Ok(collection) => collection,
-                    Err(err) => {
-                        tracing::error!("Error accessing the database: {err:#?}");
-                        return HttpResponse::InternalServerError().json(format!(
-                            "Unable to acquire the database connection: {err:#?}"
-                        ));
-                    }
-                }
-                .collection::<BlogPost>(&BlogPost::to_name());
+    };
 
-            let filter = mongodb::bson::doc! { "user_id": oid.to_string() };
-            tracing::warn!("The id to check against: {}", oid.to_string());
+    let user: &str = if let Some(user_data) = &user {
+        user_data
+    } else {
+        "No user data found"
+    };
 
-            // Each user can have more than one blog post, so we need to find all of them
-            match db.find(filter).await {
-                Ok(mut user_cursor) => {
-                    tracing::info!("User found!");
+    let var_name = IndexTemplate::new(blog_post, user, true);
 
-                    while let Some(result) = user_cursor.next().await {
-                        match result {
-                            Ok(document) => {
-                                blog_post.push(document);
-                            }
-                            Err(err) => {
-                                tracing::error!("Error retrieving document: {err:#?}");
-                                return HttpResponse::InternalServerError()
-                                    .json(format!("Error retrieving document: {err:#?}"));
-                            }
-                        }
-                    }
+    let rendered = var_name.render().expect("Failed to render template");
 
-                    tracing::warn!("Found {} number of posts", blog_post.len());
-                }
+    HttpResponse::Ok()
+        .content_type(ContentType::html())
+        .body(rendered)
+}
 
-                Err(err) => {
-                    tracing::error!("Error accessing the database: {err:#?}");
-                    return HttpResponse::InternalServerError().json(format!(
-                        "Unable to acquire the database connection: {err:#?}"
-                    ));
-                }
-            }
+#[get("/create_post")]
+#[instrument(
+    name = "Serving main page",
+    level = "debug",
+    target = "web_app_bloodhound",
+    fields(samples = 25, title = "Home"),
+    skip(_redis_client, _mongo_client)
+)]
+pub async fn create_post(
+    _mongo_client: Data<mongodb::Client>,
+    _redis_client: Data<aio::ConnectionManager>,
+) -> HttpResponse {
+    let blog_post: users::Users = users::Users::default();
+    let post_creator: IndivInput = IndivInput::new(blog_post);
 
-            let var_name = IndexTemplate::new(blog_post, &email, true);
-
-            let rendered = var_name.render().expect("Failed to render template");
-
-            HttpResponse::Ok()
-                .content_type(ContentType::html())
-                .body(rendered)
+    let rendered = match post_creator.render() {
+        Ok(rend) => rend,
+        Err(err) => {
+            return HttpResponse::Ok().body(format!("Unable to render the index page: {err:#?}"));
         }
-    }
+    };
+    HttpResponse::Ok().body(rendered)
 }
 
 #[allow(clippy::future_not_send)]

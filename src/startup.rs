@@ -117,6 +117,7 @@ async fn run(
             .service(endpoints::bs_logic::contact)
             .service(
                 web::scope("/v1")
+                    .service(index::create_post)
                     .service(login::login_template)
                     .service(login::login_user)
                     .service(logout::logout)

@@ -1,19 +1,29 @@
 use actix_web::{
     HttpResponse,
     cookie::{Cookie, time::Duration},
+    web::Data,
 };
 use askama::Template;
+use mongodb::bson::oid::ObjectId;
 use redis::{AsyncCommands, aio};
 use uuid::Uuid;
 
-use crate::{endpoints::templates::IndexTemplate, personnel::users};
+use crate::{
+    endpoints::{
+        templates::IndexTemplate,
+        user_input::{BlogPost, get_all_posts},
+    },
+    personnel::users,
+};
 
 /// # Panics
 ///
 /// If the cookie cannot be built, the function will panic.
 pub async fn create_session(
+    oid: ObjectId,
     user: &users::Users,
     mut redis_client: aio::ConnectionManager,
+    mongo_client: &Data<mongodb::Client>,
 ) -> HttpResponse {
     tracing::info!("Generating the cookie");
     // Generate a cryptographically strong, random session ID
@@ -21,7 +31,7 @@ pub async fn create_session(
     let session_key = format!("session:{session_id}");
 
     match redis_client
-        .set_ex(&session_key, user.get_email(), 86400)
+        .set_ex(&session_key, user.get_email(), 86400) // 24 hours
         .await
     {
         Ok(()) => (),
@@ -41,8 +51,17 @@ pub async fn create_session(
         .expires(actix_web::cookie::time::OffsetDateTime::now_utc() + Duration::seconds(86400))
         .finish();
 
+    let posts: Vec<BlogPost> = match get_all_posts(mongo_client, oid).await {
+        Ok(posts) => posts,
+        Err(err) => {
+            tracing::error!("Unable to procure all of the posts: {err:#?}");
+            return HttpResponse::InternalServerError().body(err.to_string());
+        }
+    };
+
     let template = IndexTemplate {
         user_email: user.get_email(),
+        content: posts,
         is_logged_in: true,
         ..Default::default()
     };
@@ -69,6 +88,7 @@ mod tests {
     }
 
     #[rstest]
+    #[ignore = "Add the mongodb and a user OID"]
     #[actix_web::test]
     async fn test_create_session_sets_cookie(get_local_redis_connection: redis::Client) {
         let conn = aio::ConnectionManager::new(get_local_redis_connection)
@@ -95,6 +115,7 @@ mod tests {
     }
 
     #[rstest]
+    #[ignore = "Add the mongodb and a user OID"]
     #[actix_web::test]
     async fn test_create_session_stores_in_redis(get_local_redis_connection: redis::Client) {
         let mut conn = aio::ConnectionManager::new(get_local_redis_connection)
@@ -120,6 +141,7 @@ mod tests {
     }
 
     #[rstest]
+    #[ignore = "Add the mongodb and a user OID"]
     #[actix_web::test]
     async fn test_create_session_has_ttl(get_local_redis_connection: redis::Client) {
         // let mut conn = get_local_redis_connection.get_connection().unwrap();
