@@ -11,12 +11,18 @@ $light-green: hsl(120, 100%, 90%);
 $light-red: hsl(0, 100%, 90%);
 $light-yellow: hsl(60, 100%, 90%);
 
+
+html {
+	hanging-punctuation: first last;
+	color-scheme: dark light;
+	scrollbar-gutter: stable;
+}
+
 *,
 *::before,
 *::after {
 	box-sizing: border-box;
-	background-color: darkgray;
-	margin: 0;
+
 
 }
 
@@ -31,28 +37,60 @@ h6 {
 
 
 body {
+	margin: 0;
 	font-family: 'Times New Roman', Times, serif;
 	min-block-size: 100svh;
+	display: grid;
+	grid-template-rows: auto 1fr auto;
+	// padding: 1em 0;
 
-	#template_header {
-		display: grid;
-		grid-template-columns: 65px 1fr 1fr 1fr 65px;
-		grid-template-rows: auto 1fr auto;
-		background-color: $black;
+	#template__header {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		background-color: darkgreen;
+		gap: 1em;
+		padding: 1em 1em;
+
+		&__top {
+			// 5 or more buttons
+			display: flex;
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 1em;
+
+			button {
+				grid-row: span;
+				font-size: 2em;
+				background-color: coral;
+				padding: 1rem 0.25em;
+				border: white 2px solid;
+				border-radius: 2em;
+			}
+		}
 	}
 
 	#template_pages {
-	    display: grid;
+		display: grid;
+		min-height: 100%;
 	}
 
-	#template_footer {
-	    display: flex;
+	#template__footer {
+		grid-column: 1 / -1;
+		grid-row: 3 / 4;
+		background-color: coral;
+		color: white;
+		text-align: center;
+		padding: 10px 0;
 	}
 
 }
 
 
+
 @include meta.load-css("_index");
+@include meta.load-css("_footer");
 @include meta.load-css("_login");
 @include meta.load-css("_registration");
 @include meta.load-css("_error");

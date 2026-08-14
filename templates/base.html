@@ -28,10 +28,10 @@
     {% block head %}{% endblock %}
   </head>
   <body>
-    <header id="template_header">
-      <nav id="template_header__top">
+    <header id="template__header">
+      <nav id="template__header__top">
 	<button
-	  id="template_header__top__home"
+	  id="template__header__top__home"
 	  hx-get="/"
 	  hx-target="#template_pages"
 	  hx-swap="outerHTML"
@@ -42,7 +42,7 @@
 	</button>
 	{% if is_logged_in %}
 	<button
-	  id="template_header__top__login"
+	  id="template__header__top__login"
 	  hx-get="/v1/logout"
 	  hx-target="#template_pages"
 	  hx-swap="outerHTML"
@@ -51,7 +51,7 @@
 	  LOGOUT
 	</button>
 	<button
-	  id="template_header__top__settings"
+	  id="template__header__top__settings"
 	  hx-get="/v1/settings"
 	  hx-target="#template_pages"
 	  hx-swap="outerHTML"
@@ -59,8 +59,10 @@
 	  hx-trigger="click"
 	  >
 	</button>
+	{% endif %}
+	{% if !is_logged_in %}
 	<button
-	  id="template_header__top__login"
+	  id="template__header__top__login"
 	  hx-get="/v1/login"
 	  hx-target="#template_pages"
 	  hx-swap="outerHTML"
@@ -70,7 +72,7 @@
 	  LOGIN
 	</button>
 	<button
-	  id="template_header__top__signup"
+	  id="template__header__top__signup"
 	  hx-get="/v1/register"
 	  hx-target="#template_pages"
 	  hx-swap="outerHTML"
@@ -81,22 +83,22 @@
 	</button>
 	{% endif %}      
       </nav>
-      <aside id="template_header__top__logo">
+      <aside id="template__header__logo">
 	<img src="https://i.pravatar.cc/300" alt="Personal blog default logo" width="300px" height="350px">
 	<h1>WELCOME</h1><h3>{{ user_email  }}</h3>
       </aside>
     </header>
-    <div id="template_pages">
+    <div id="template__pages">
       {% block individual_page_contents %}
+      {% endblock %}
       
-      {% endblock %}
-      {% block error_contents %}
       <div id="error_template">
+	{% block error_contents %}
+	{% endblock %}
       </div>
-      {% endblock %}
     </div>
-    <footer>
-      <section id="template_footer">
+    <footer id="template__footer">
+      <section id="template__footer__main">
 	<button
 	  hx-get="/contact"
 	  hx-target="#main__info_cards"
@@ -135,7 +137,7 @@
 	  ABOUT
 	</button>
       </section>
-      <aside id="template_footer__version">
+      <aside id="template__footer__version">
 	V.{{ version }}
       </aside>
     </footer>

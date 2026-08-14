@@ -1,0 +1,34 @@
+#template__footer__main {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: center;
+	background-color: darkgreen;
+
+	button {
+		grid-row: 1 / 2;
+		background-color: coral;
+		color: white;
+		border: none;
+		border-radius: 2rem;
+		padding: 8px 16px;
+		margin: 3rem;
+		font-size: 1.5rem;
+		cursor: pointer;
+		transition: background-color 0.3s ease;
+
+		&:hover {
+			background-color: lightgray;
+
+
+		}
+	}
+}
+
+template__footer__version {
+	grid-row: 2 / 3;
+	grid-column: 2 / 3;
+	margin-top: 5px;
+	font-size: 0.9rem;
+	color: lightyellow;
+}
