@@ -10,22 +10,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{error, instrument};
 
 use crate::{
+    endpoints::templates,
     models::mongo::{self},
     personnel::users::Users,
     security::passworder::PassWorder,
     settings,
 };
-
-/// All things login that need to be handled for the ``Personal Blog`` services website.
-
-#[derive(Template)]
-#[template(path = "register.html")]
-struct RegisterTemplate<'a> {
-    title: &'a str,
-    content: Vec<&'a str>,
-    is_logged_in: bool,
-    user_email: &'a str,
-}
 
 #[derive(Deserialize, Debug, Serialize)]
 pub struct RegisterUser {
@@ -44,11 +34,9 @@ pub struct RegisterUser {
     target = "sundayLifeServices web app"
 )]
 pub async fn register_template() -> HttpResponse {
-    let template = RegisterTemplate {
+    let template = templates::RegisterTemplate {
         title: "Registration",
-        content: vec![],
-        is_logged_in: false,
-        user_email: "",
+        ..Default::default()
     };
 
     let template = template.render().expect("About page render error");

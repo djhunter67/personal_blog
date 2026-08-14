@@ -4,7 +4,7 @@ use askama::Template;
 use std::path::PathBuf;
 use tracing::instrument;
 
-use crate::personnel::users;
+use crate::{personnel::users, startup::VERSION};
 
 use super::user_input::BlogPost;
 
@@ -98,13 +98,76 @@ impl IndexTemplate {
 }
 
 #[derive(Template)]
+#[template(path = "login.html")]
+pub struct LoginTemplate<'a> {
+    pub title: &'a str,
+    pub is_logged_in: bool,
+    pub user_email: &'a str,
+    pub version: &'a str,
+}
+
+impl Default for LoginTemplate<'_> {
+    fn default() -> Self {
+        Self {
+            title: Default::default(),
+            is_logged_in: Default::default(),
+            user_email: Default::default(),
+            version: VERSION,
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "register.html")]
+pub struct RegisterTemplate<'a> {
+    pub title: &'a str,
+    pub content: Vec<&'a str>,
+    pub is_logged_in: bool,
+    pub user_email: &'a str,
+    pub version: &'a str,
+}
+
+impl Default for RegisterTemplate<'_> {
+    fn default() -> Self {
+        Self {
+            title: Default::default(),
+            content: Vec::default(),
+            is_logged_in: Default::default(),
+            user_email: Default::default(),
+            version: VERSION,
+        }
+    }
+}
+
+#[derive(Template)]
+#[template(path = "settings.html")]
+pub struct SettingsTemplate<'a> {
+    pub title: &'a str,
+    pub is_logged_in: bool,
+    pub user_email: &'a str,
+    pub version: &'a str,
+}
+
+impl Default for SettingsTemplate<'_> {
+    fn default() -> Self {
+        Self {
+            title: Default::default(),
+            is_logged_in: Default::default(),
+            user_email: Default::default(),
+            version: VERSION,
+        }
+    }
+}
+
+#[derive(Template)]
 #[template(path = "parts/indiv_post.html")]
 pub struct IndivPost {
     content: BlogPost,
 }
 
 impl IndivPost {
-    pub fn new(content: BlogPost) -> Self {
+    #[must_use = "Create a new IndivPost"]
+    pub const fn new(content: BlogPost) -> Self {
         Self { content }
     }
 }
@@ -115,7 +178,8 @@ pub struct IndivInput {
     content: users::Users,
 }
 impl IndivInput {
-    pub fn new(content: users::Users) -> Self {
+    #[must_use = "Create a new instance since the members are private"]
+    pub const fn new(content: users::Users) -> Self {
         Self { content }
     }
 }

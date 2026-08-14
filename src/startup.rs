@@ -10,6 +10,7 @@ use std::time::Duration;
 use tracing::{instrument, warn};
 
 pub const PARSE_COUNT: u8 = 9;
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[instrument(
     name = "Running the server",

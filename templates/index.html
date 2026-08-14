@@ -4,14 +4,14 @@
   <section id="main__paths">
     <div hx-ext="response-targets">
       {% if is_logged_in %}    
-      <!-- <button -->
-      <!--   hx-get="/about" -->
-      <!--   hx-target="#main" -->
-      <!--   hx-swap="innerHTML" -->
-      <!--   hx-trigger="click" -->
-      <!--   hx-target-error="#any_error"> -->
-      <!--   ABOUT -->
-      <!-- </button>       -->
+      <button
+        hx-get="/about"
+        hx-target="#main"
+        hx-swap="innerHTML"
+        hx-trigger="click"
+        hx-target-error="#any_error">
+        ABOUT
+      </button>
       <button
         hx-get="/v1/create_post"
         hx-target="#main"
@@ -30,49 +30,6 @@
     {% endif %}
   </section>
 </div>
-<footer>
-  <section id="footer_container">
-    <button
-      hx-get="/contact"
-      hx-target="#main__info_cards"
-      hx-swap="outerHTML"
-      hx-push-url="true"
-      hx-trigger="click">
-      CONTACT
-    </button>
-    <button
-      hx-get="https://facebook.com"
-      hx-push-url="true"
-      hx-target="_blank"
-      hx-trigger="click">
-      FACEBOOK
-    </button>
-    <button
-      hx-get="https://x.com"
-      hx-push-url="true"
-      hx-target="_top"
-      hx-trigger="click">
-      TWITTER
-    </button>
-    <button
-      hx-get="https://instagram.com"
-      hx-push-url="true"
-      hx-target="_top"
-      hx-trigger="click">
-      INSTAGRAM
-    </button>
-    <button
-      hx-get="/about"
-      hx-push-url="true"
-      hx-target="#main__info_cards"
-      hx-swap="innerHTML"
-      hx-trigger="click">
-      ABOUT
-    </button>
-  </section>
-  <aside id="footer_container__version">
-    V.{{ version }}
-  </aside>
-</footer>
+
 
 {% call super() %} {% endblock %}

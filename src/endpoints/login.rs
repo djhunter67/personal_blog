@@ -9,19 +9,12 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 use crate::{
-    endpoints::templates::IndexTemplate, models::mongo, personnel::users,
-    security::session::create_session, settings,
+    endpoints::templates::{self, IndexTemplate},
+    models::mongo,
+    personnel::users,
+    security::session::create_session,
+    settings,
 };
-
-/// All things login that need to be handled for the ``SundayLife`` services website.
-
-#[derive(Template, Default)]
-#[template(path = "login.html")]
-pub struct LoginTemplate<'a> {
-    pub title: &'a str,
-    pub is_logged_in: bool,
-    pub user_email: &'a str,
-}
 
 /// # TODO:
 ///
@@ -50,7 +43,7 @@ pub struct LoginUser {
 pub async fn login_template() -> HttpResponse {
     debug!("Login page loaded");
 
-    let template = LoginTemplate::default();
+    let template = templates::LoginTemplate::default();
 
     let template = template.render().expect("Login page render error");
 

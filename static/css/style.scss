@@ -1,28 +1,5 @@
+// base.html
 @use "sass:meta";
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-    // background-color: darkgray;
-    // outline: 1px solid red;  // Debugging overflow issues
-    
-}
-
-// * {
-//     margin: 0;
-// }
-
-body {
-    font-family: 'Times New Roman', Times, serif;
-    // width: 100dvw;
-    // min-height: 100%;
-    // overflow-x: hidden;
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0;
-}
 
 $blue: hsl(200, 100%, 50%);
 $black: hsl(0, 0%, 0%);
@@ -34,190 +11,77 @@ $light-green: hsl(120, 100%, 90%);
 $light-red: hsl(0, 100%, 90%);
 $light-yellow: hsl(60, 100%, 90%);
 
-#template_pages {
-    display: grid;
-    grid-template-columns: 65px 1fr 1fr 1fr 65px;
-    grid-template-rows: auto auto 0.25fr;
-    // max-height: 100vh;
-    background-color: $black;
-    justify-content: center;
-    overflow-x: hidden;
-    // min-height: 100%;
-    height: fit-content;
-    width: 100%;
-    margin: auto;
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	background-color: darkgray;
+	margin: 0;
 
-    &__top {	
-	grid-column: 1 / -1;
-	grid-row: 1 / 2;
-	background-color: $light-gray;
-	display: flex;
-	flex-direction: row;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-evenly;
-	// grid-template-columns: repeat(auto-fit, minmax(15.625rem, 1fr));
-	// grid-template-rows: 1fr 2fr;
-	padding: 1rem 1rem 0 1rem;
-	min-width: 100%;
-	margin: 0 auto;
+}
 
-	&__nav {
-	    grid-row: 1 / 2;
-	    grid-column: 1 / -1;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	text-wrap: balance;
+}
+
+
+body {
+	font-family: 'Times New Roman', Times, serif;
+	min-block-size: 100svh;
+
+	#template_header {
+		display: grid;
+		grid-template-columns: 65px 1fr 1fr 1fr 65px;
+		grid-template-rows: auto 1fr auto;
+		background-color: $black;
+	}
+
+	#template_pages {
 	    display: grid;
-	    grid-template-columns: repeat(auto-fit, minmax(6.625rem, 1.5fr));
-	    gap: 0.75rem;
-	    // grid-template-rows: repeat
-
-	    &__home {
-		background-color: white;
-		color: $light-red;
-		border: none;
-		border-radius: 5px;
-		padding: 8px 16px;
-		margin: 0;
-		width: min-content;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background-color 0.3s ease;
-
-		&:hover {
-		    background-color: lightgray;
-		}
-	    }
-	    
-	    &__login {
-		background-color: white;
-		color: $light-red;
-		border: none;
-		border-radius: 5px;
-		padding: 8px 16px;
-		margin: 0;
-		width: min-content;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background-color 0.3s ease;
-
-		&:hover {
-		    background-color: lightgray;
-		}
-	    }
-
-	    &__signup {
-		background-color: white;
-		color: $light-red;
-		border: transparent;
-		border-radius: 5px;
-		padding: 8px 16px;
-		margin: 0;
-		width: min-content;
-		font-size: 1rem;
-		cursor: pointer;
-		transition: background-color 0.3s ease;
-
-		&:hover {
-		    background-color: lightgray;
-		}
-	    }
-
-	    &__settings {
-		background-image: url('/static/settings_icon');
-		background-size: cover;
-		width: 2rem;
-		height: 2rem;
-		border: none;
-		cursor: pointer;
-		grid-column: 4 / 5;
-		grid-row: 1 / 2;
-		justify-self: end;;
-	    }
 	}
-	
-	&__logo {
-	    grid-row: 2;
-	    grid-column: 1 / 2;
-	    image-orientation: from-font;
-	    width: min-content;
-	    
-	    img {
-		padding-top: 1rem;
-		padding-right: 1rem;
-		border-radius: 6rem;
-	    }
-	}
-	&__subject {
-	    grid-column: 2 / 4;
-	    // contains an H1 header and an H2 subheader
-	    font-weight: bold;
-	    text-align: center;
-	    width: auto;
-	    
-	    &__first_word {	    
-		// first word and is the H1 header
-		font-size: clamp(1rem, 1.5rem, 5rem);
-		// font-size: 1rem;
-		color: white;
-		margin: 0;
-		display: flex;
-		justify-content: center;
-		flex-direction: column;
-		flex-wrap: wrap;
-		max-width: 337px;
 
-		h3 {
-		    text-align: center;
-		    text-wrap: wrap;
-		}
-	    }
+	#template_footer {
+	    display: flex;
 	}
-    }
 
-    @include meta.load-css("_index");
-    @include meta.load-css("_login");
-    @include meta.load-css("_registration");
-    @include meta.load-css("_error");
-    @include meta.load-css("_settings");
-    @include meta.load-css("_indiv_post");
-    @include meta.load-css("_confirmation");
-    @include meta.load-css("_user_input");
 }
 
-#info_buttons {
-    background-color: white;
-}
+
+@include meta.load-css("_index");
+@include meta.load-css("_login");
+@include meta.load-css("_registration");
+@include meta.load-css("_error");
+@include meta.load-css("_settings");
+@include meta.load-css("_indiv_post");
+@include meta.load-css("_confirmation");
+@include meta.load-css("_user_input");
 
 // implement a media query for mobile devices with a max-width of 600px
 @media (max-width: 600px) {
-	// #template_pages {
-	// grid-template-columns: 1fr;
-	// grid-template-rows: auto auto auto;
-	// }
-
-    #template_pages__top {
-	grid-row: 1 / 2;
-	grid-column: 1 / -1;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	width: 99%;
+	#template_pages__top {
+		grid-row: 1 / 2;
+		grid-column: 1 / -1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 99%;
 	}
 
 	#template_pages__top__nav {
-	grid-template-columns: 1fr;
+		grid-template-columns: 1fr;
 	}
 
 	#template_pages__top__subject {
-	grid-column: 1 / -1;
-	text-align: center;
+		grid-column: 1 / -1;
+		text-align: center;
 	}
 
 	img {
-	    border-radius: 6rem;
+		border-radius: 6rem;
 	}
-
-
 }
-
-
-// @media (max-width: )

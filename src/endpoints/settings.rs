@@ -9,19 +9,11 @@ use redis::{AsyncCommands, aio};
 use tracing::instrument;
 
 use crate::{
-    endpoints::templates::IndexTemplate,
+    endpoints::templates::{self, IndexTemplate},
     models::{mongo, redis_conf::authenticated_user_id},
     personnel::users,
     security::{passworder::PassWorder, validate},
 };
-
-#[derive(Template)]
-#[template(path = "settings.html")]
-struct SettingsTemplate<'a> {
-    title: &'a str,
-    is_logged_in: bool,
-    user_email: &'a str,
-}
 
 #[derive(Debug, MultipartForm)]
 pub struct UserSettingsChange {
@@ -85,10 +77,11 @@ pub async fn settings_template(
             };
 
             // Authenticate this endpoint
-            let template = SettingsTemplate {
+            let template = templates::SettingsTemplate {
                 title: "Settings",
                 is_logged_in: true,
                 user_email: &user.unwrap_or_default(),
+                ..Default::default()
             };
 
             let template = template.render().expect("Login page render error");
