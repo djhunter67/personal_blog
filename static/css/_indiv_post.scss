@@ -1,21 +1,16 @@
 #indiv_cards {
 
 	display: flex;
+	flex-direction: column;
 	margin-top: 2rem;
-	width: 85%;
-	box-sizing: border-box;
 	justify-content: center;
 	align-items: center;
-	// background-color: #00512a;
 
 
 	.indiv_cards__card {
-		// grid-column: 1 / -1;
 		box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-		// width: 80%;
-		// max-width: 85%; // For when a single card exists
 		display: flex;
-		flex-direction: row;
+		flex-direction: column;
 		justify-content: center;
 		align-items: center;
 		background-color: #005e2a;
@@ -51,12 +46,13 @@
 				// margin-top: 0.25rem;
 				border-radius: 50%;
 				border: 5px solid white;
+				margin-bottom: 2em;
 			}
 
 			h2 {
 				color: white; // temporary
 				font-size: 3em;
-				line-height: 1.6;
+				line-height: 1.2;
 				letter-spacing: 3px;
 				word-wrap: wrap;
 				// margin-left: 3.4rem;
@@ -98,7 +94,7 @@
 		&__text {
 
 			// flex: 0 0 70%;
-			max-width: 50%;
+			// max-width: 50%;
 
 			// height: 130%;
 			p {
@@ -115,9 +111,6 @@
 				scrollbar-width: 1px;
 				max-height: 26rem;
 				transition: all 0.3s ease;
-
-
-				padding: 1rem;
 			}
 
 			p:hover {
@@ -148,6 +141,7 @@
 #main__info_cards__confirmation {
 	display: flex;
 	flex-direction: row;
+	flex-wrap: wrap;
 	margin: 1rem;
 	gap: 1rem;
 	// outline: 1px black dotted;

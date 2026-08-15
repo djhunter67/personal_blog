@@ -4,31 +4,31 @@
 	align-items: center;
 	justify-content: center;
 	background-color: darkgreen;
+	gap: 3em;
 
 	button {
-		grid-row: 1 / 2;
 		background-color: coral;
 		color: white;
 		border: none;
 		border-radius: 2rem;
 		padding: 8px 16px;
 		margin: 3rem;
-		font-size: 1.5rem;
+		font-size: 1.8rem;
 		cursor: pointer;
-		transition: background-color 0.3s ease;
+		transition: all 0.3s ease;
 
 		&:hover {
-			background-color: lightgray;
+		    background-color: lightgray;
+		    color: black;
 
 
 		}
 	}
 }
 
-template__footer__version {
-	grid-row: 2 / 3;
-	grid-column: 2 / 3;
+#template__footer__version {
 	margin-top: 5px;
-	font-size: 0.9rem;
+	font-size: 1.9rem;
 	color: lightyellow;
+	margin: auto 0;
 }

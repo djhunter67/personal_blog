@@ -31,7 +31,7 @@ impl Default for IndexTemplate {
             title: String::from("Home"),
             content: Vec::default(),
             version: default_version(),
-            user_email: String::new(),
+            user_email: String::from("Please login to create a journal entry"),
             is_logged_in: false,
         }
     }
@@ -109,9 +109,9 @@ pub struct LoginTemplate<'a> {
 impl Default for LoginTemplate<'_> {
     fn default() -> Self {
         Self {
-            title: Default::default(),
+            title: "Login",
             is_logged_in: Default::default(),
-            user_email: Default::default(),
+            user_email: "Please login to create a post",
             version: VERSION,
         }
     }

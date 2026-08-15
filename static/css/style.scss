@@ -16,15 +16,18 @@ html {
 	hanging-punctuation: first last;
 	color-scheme: dark light;
 	scrollbar-gutter: stable;
-}
-
-*,
-*::before,
-*::after {
 	box-sizing: border-box;
-
-
 }
+
+
+* {
+	button:focus-visible {
+		outline: 7px solid hotpink;
+	}
+
+	margin: 0;
+}
+
 
 h1,
 h2,
@@ -37,12 +40,14 @@ h6 {
 
 
 body {
-	margin: 0;
+
 	font-family: 'Times New Roman', Times, serif;
 	min-block-size: 100svh;
-	display: grid;
-	grid-template-rows: auto 1fr auto;
-	// padding: 1em 0;
+	max-width: 100svw;
+	display: flex;
+	flex-direction: column;
+	overflow-x: hidden;
+
 
 	#template__header {
 		display: flex;
@@ -52,43 +57,29 @@ body {
 		background-color: darkgreen;
 		gap: 1em;
 		padding: 1em 1em;
-
-		&__top {
-			// 5 or more buttons
-			display: flex;
-			flex-direction: row;
-			flex-wrap: wrap;
-			gap: 1em;
-
-			button {
-				grid-row: span;
-				font-size: 2em;
-				background-color: coral;
-				padding: 1rem 0.25em;
-				border: white 2px solid;
-				border-radius: 2em;
-			}
-		}
+		min-height: 33svh;
+		// max-width: 100svw;
 	}
 
-	#template_pages {
+	#template__pages {
 		display: grid;
-		min-height: 100%;
+		min-height: 47svh;
+		background-color: blue;
 	}
 
 	#template__footer {
-		grid-column: 1 / -1;
-		grid-row: 3 / 4;
+		margin-block-start: auto;
+		// grid-column: 1 / -1;
+		// grid-row: 3 / 4;
 		background-color: coral;
 		color: white;
 		text-align: center;
-		padding: 10px 0;
+		// max-width: 100vw;
+		min-height: 20svh;
 	}
-
 }
 
-
-
+@include meta.load-css("_header");
 @include meta.load-css("_index");
 @include meta.load-css("_footer");
 @include meta.load-css("_login");

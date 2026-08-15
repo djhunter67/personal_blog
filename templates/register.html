@@ -5,8 +5,8 @@
     <form
       id="user_register"
       hx-post="/v1/register_user"
-      hx-target="#register__response"
-      hx-swap="innerHTML"
+      hx-target="body"
+      hx-swap="outerHTML"
       hx-on::after-request="if(event.detail.xhr.responseURL.includes('error')) { htmx.trigger('#email', 'keyup')} else { htmx.trigger('#success', 'click') }">
       <label for="email">EMAIL:</label>
       <div hx-ext="response-targets">
@@ -48,7 +48,7 @@
   </div>
   <div id="register__response" style="color: black;">
     <h4>Server Response</h4>
-    <div style="color: black;">
+    <div>
       {% for (i, data) in content.iter().enumerate() %}
       {{i}} -> {{ data }}
       {% endfor %}

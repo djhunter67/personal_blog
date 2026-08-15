@@ -149,12 +149,28 @@ pub async fn register_user(
                 }
             }
 
-            HttpResponse::Created().json(format!(
-                "User Registered, ID: {}",
-                oid.inserted_id.as_object_id().expect("Will be a value")
-            ))
+            let login_template = templates::LoginTemplate {
+                user_email: "Login Succesful!",
+                ..Default::default()
+            };
+
+            let render = login_template
+                .render()
+                .expect("Failure to render the login template");
+
+            HttpResponse::Created().body(render)
         }
-        Err(err) => HttpResponse::InternalServerError().json(err.to_string()),
+        Err(err) => {
+            tracing::error!("Unable to register user: {err:#?}");
+            // HttpResponse::InternalServerError().json(err.to_string())},
+            let index_template = templates::IndexTemplate::default();
+
+            let render = index_template
+                .render()
+                .expect("Failure to return the default index");
+
+            HttpResponse::Ok().body(render)
+        }
     }
 }
 

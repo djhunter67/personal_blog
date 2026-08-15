@@ -1,0 +1,20 @@
+#template__header {
+
+	// filled in in the style.scss file
+	&__top {
+		// 5 or more buttons
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		gap: 1em;
+
+		button {
+			grid-row: span;
+			font-size: 2em;
+			background-color: coral;
+			padding: 1rem 0.25em;
+			border: white 2px solid;
+			border-radius: 2em;
+		}
+	}
+}

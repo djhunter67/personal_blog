@@ -5,7 +5,7 @@
     <div hx-ext="response-targets">
       <button
         hx-get="/about"
-        hx-target="#main"
+        hx-target="#main__info_cards"
         hx-swap="innerHTML"
         hx-trigger="click"
         hx-target-error="#any_error">
@@ -13,8 +13,8 @@
       </button>
       <button
         hx-get="/v1/create_post"
-        hx-target="#main"
-        hx-swap="innerHTML"
+        hx-target="#main__info_cards"
+        hx-swap="outerHTML"
         hx-trigger="click"
         hx-target-error="#any_error">
         CREATE POST
