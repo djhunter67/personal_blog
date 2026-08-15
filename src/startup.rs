@@ -1,6 +1,7 @@
 use crate::endpoints::{
-    self, health, index, login, logout, register, settings, templates, user_input, validate_email,
+    self, health, index, login, logout, register, settings, user_input, validate_email,
 };
+use crate::images;
 use crate::settings::Settings;
 use actix_web::{self, App, HttpServer, http::KeepAlive, middleware, web};
 use mongodb::options::ClientOptions;
@@ -89,25 +90,25 @@ async fn run(
             .app_data(db_mongo.clone())
             .service(
                 web::scope("/static")
-                    .service(templates::favicon)
-                    .service(templates::icon_192)
-                    .service(templates::icon_512)
-                    .service(templates::icon_large)
-                    .service(templates::link_preview)
-                    .service(templates::manifest)
-                    .service(templates::logomain)
-                    .service(templates::usmc_patrolling)
-                    .service(templates::stylesheet)
-                    .service(templates::source_map)
-                    .service(templates::htmx)
-                    .service(templates::response_targets)
-                    .service(templates::sse)
-                    .service(templates::action_script)
-                    .service(templates::prof_headshot)
-                    .service(templates::spinner)
-                    .service(templates::github)
-                    .service(templates::linkedin)
-                    .service(templates::settings_icon),
+                    .service(images::favicon)
+                    .service(images::icon_192)
+                    .service(images::icon_512)
+                    .service(images::icon_large)
+                    .service(images::link_preview)
+                    .service(images::manifest)
+                    .service(images::logomain)
+                    .service(images::usmc_patrolling)
+                    .service(images::stylesheet)
+                    .service(images::source_map)
+                    .service(images::htmx)
+                    .service(images::response_targets)
+                    .service(images::sse)
+                    .service(images::action_script)
+                    .service(images::prof_headshot)
+                    .service(images::spinner)
+                    .service(images::github)
+                    .service(images::linkedin)
+                    .service(images::settings_icon),
             )
             .service(index::index)
             .service(health::health_check)
