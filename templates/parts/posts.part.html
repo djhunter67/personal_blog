@@ -1,7 +1,8 @@
   {% for (i,card) in content.iter().enumerate() %}
   <div class="card">
     <div class="card__header">
-      <img src="https://i.pravatar.cc/30{{i + 1}}" alt="card image">
+      <h4>{{ i + 1 }}</h4>
+      <img src="/static/rand_images/{{i}}" alt="card image">      
       <h2>{{ card.get_title() }}</h2>
       <h3>Author: {{card.get_author()}}</h3>
     </div>

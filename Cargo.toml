@@ -40,8 +40,8 @@ codegen-units = 256
 lto = "off"
 panic = "unwind"
 incremental = true
-debug = false
-debug-assertions = true
+debug = "line-tables-only"
+debug-assertions = false
 
 [profile.dev.build-override]
 opt-level = 0
@@ -52,7 +52,7 @@ debug = false
 # dev_macros = { path = "../dev_macros" }
 actix-files = "0.6.6"
 actix-web = "4.9.0"
-redis = { version = "1.2.2", features = ["aio", "connection-manager", "r2d2", "tokio-comp"] }
+redis = { version = "1.5.0", features = ["aio", "connection-manager", "r2d2", "tokio-comp"] }
 askama = "0.12.1"
 r2d2 = "0.8.10"
 r2d2_postgres = "0.18.2"

@@ -1,8 +1,11 @@
+use std::fs as fss;
 use std::path;
 
 use actix_files as fs;
 use actix_multipart::form::{MultipartForm, tempfile::TempFile};
+use actix_web::web;
 use actix_web::{HttpResponse, Responder};
+use rand::seq::IndexedRandom;
 
 #[derive(Debug, MultipartForm)]
 pub struct ImageUpload {
@@ -354,7 +357,7 @@ pub async fn linkedin() -> Result<fs::NamedFile, actix_web::Error> {
 
 #[actix_web::get("/settings_icon")]
 #[tracing::instrument(
-    name = "Serving settings_icon.svg",
+    name = "Serving settings_icon.jpg",
     level = "info",
     target = "settings_icon"
 )]
@@ -368,6 +371,54 @@ pub async fn settings_icon() -> Result<fs::NamedFile, actix_web::Error> {
         Ok(file) => Ok(file),
         Err(err) => {
             tracing::error!("Error opening file -- {filename} -- : {err:#?}");
+            Err(actix_web::error::ErrorInternalServerError(err))
+        }
+    }
+}
+
+#[actix_web::get("/rand_images/{num}")]
+#[tracing::instrument(
+    name = "Serving random_images to replace pravator dep.",
+    level = "info",
+    target = "Random images"
+)]
+pub async fn random_images(num: web::Path<u8>) -> Result<fs::NamedFile, actix_web::Error> {
+    tracing::info!("Serving random images that replace pravatar");
+
+    let mut rand_img: Vec<path::PathBuf> = Vec::new();
+
+    let path: String = ["static/", "imgs/", "rand_set/"].concat();
+
+    let dir = fss::read_dir(&path);
+    if let Ok(entries) = dir {
+        tracing::debug!("The found files: {entries:#?}");
+        for entry in entries.filter_map(std::result::Result::ok) {
+            let p = entry.path();
+            if p.is_file() {
+                rand_img.push(p);
+            }
+        }
+    }
+
+    if rand_img.is_empty() {
+        tracing::error!("No images found in the requisite directory: {path}");
+        return Err(actix_web::error::ErrorInternalServerError(
+            "No images found in the requisite directory",
+        ));
+    }
+
+    let mut rng = rand::rng();
+
+    #[allow(clippy::unwrap_used)] // Failure here would be on the OS
+    let file_chosen: path::PathBuf = rand_img.choose(&mut rng).cloned().unwrap();
+
+    let path: path::PathBuf = std::iter::once(&&file_chosen).collect();
+    tracing::warn!("The file chosen: {path:#?}");
+
+    match fs::NamedFile::open(&path) {
+        Ok(file) => Ok(file),
+        Err(err) => {
+            tracing::error!("Error opening directory -- {path:#?} -- : {err:#?}");
             Err(actix_web::error::ErrorInternalServerError(err))
         }
     }

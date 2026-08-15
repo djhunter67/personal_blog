@@ -108,7 +108,8 @@ async fn run(
                     .service(images::spinner)
                     .service(images::github)
                     .service(images::linkedin)
-                    .service(images::settings_icon),
+                    .service(images::settings_icon)
+                    .service(images::random_images),
             )
             .service(index::index)
             .service(health::health_check)
