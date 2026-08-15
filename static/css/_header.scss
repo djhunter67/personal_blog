@@ -1,20 +1,39 @@
-#template__header {
+// filled in in the style.scss file
+#template__header__top {
+	// 5 or more buttons
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 1em;
 
-	// filled in in the style.scss file
-	&__top {
-		// 5 or more buttons
-		display: flex;
-		flex-direction: row;
-		flex-wrap: wrap;
-		gap: 1em;
-
-		button {
-			grid-row: span;
-			font-size: 2em;
-			background-color: coral;
-			padding: 1rem 0.25em;
-			border: white 2px solid;
-			border-radius: 2em;
-		}
+	button {
+		grid-row: span;
+		font-size: 2em;
+		background-color: coral;
+		padding: 1rem 0.25em;
+		border: white 2px solid;
+		border-radius: 2em;
 	}
+}
+
+#template__header__logo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 2em;
+    text-wrap: wrap;
+
+    img {
+	border-radius: 50%;
+	object-fit: cover;
+	padding-bottom: 1em;
+    }
+
+    h1 {
+	color: red;
+    }
+
+    h3 {
+	color: blue;
+    }
 }
