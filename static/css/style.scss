@@ -11,6 +11,12 @@ $light-green: hsl(120, 100%, 90%);
 $light-red: hsl(0, 100%, 90%);
 $light-yellow: hsl(60, 100%, 90%);
 
+$saddle-brown: hsla(23, 66%, 29%, 1);
+$rosy-taupe: hsla(9, 23%, 61%, 1);
+$lavender-veil: hsla(282, 79%, 94%, 1);
+$frosted-blue: hsla(194, 95%, 76%, 1);
+$pacific-blue: hsla(191, 59%, 55%, 1);
+
 
 html {
 	hanging-punctuation: first last;
@@ -54,7 +60,7 @@ body {
 		flex-direction: column;
 		justify-content: center;
 		align-items: center;
-		background-color: darkgreen;
+		background-color: $saddle-brown;
 		gap: 1em;
 		padding: 1em 1em;
 		min-height: 33svh;
@@ -64,17 +70,14 @@ body {
 	#template__pages {
 		display: grid;
 		min-height: 47svh;
-		background-color: blue;
+		background-color: $light-blue;
 	}
 
 	#template__footer {
 		margin-block-start: auto;
-		// grid-column: 1 / -1;
-		// grid-row: 3 / 4;
-		background-color: coral;
-		color: white;
+		background-color: $light-red;
+		color: $white;
 		text-align: center;
-		// max-width: 100vw;
 		min-height: 20svh;
 	}
 }
