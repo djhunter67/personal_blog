@@ -116,18 +116,49 @@ pub async fn index(
 }
 
 #[get("/create_post")]
+#[allow(clippy::future_not_send)]
 #[instrument(
     name = "Serving main page",
     level = "debug",
     target = "web_app_bloodhound",
     fields(samples = 25, title = "Home"),
-    skip(_redis_client, _mongo_client)
+    skip(redis_client, req, _mongo_client)
 )]
 pub async fn create_post(
+    req: HttpRequest,
     _mongo_client: Data<mongodb::Client>,
-    _redis_client: Data<aio::ConnectionManager>,
+    redis_client: Data<aio::ConnectionManager>,
 ) -> HttpResponse {
-    let blog_post: users::Users = users::Users::default();
+    let session_id = if let Some(cookie) = req.cookie("session_id") {
+        cookie.value().to_string()
+    } else {
+        tracing::error!("User cookie not found: {:#?}", req.connection_info());
+
+        let var_name = IndexTemplate::new(vec![], "Login to create a journal entry.", false);
+
+        let rendered = var_name.render().expect("Failed to render template");
+
+        return HttpResponse::Ok()
+            .content_type(ContentType::html())
+            .body(rendered);
+    };
+
+    tracing::info!("Creating the cache-layer session key");
+    let session_key = format!("session:{session_id}");
+
+    tracing::info!("Searching for the session key: {session_key}");
+    let user: Option<String> = match redis_client.as_ref().clone().get(&session_key).await {
+        Ok(result) => Some(result),
+        Err(err) => {
+            tracing::error!("Error accessing the cache layer: {err:#?}");
+            return HttpResponse::InternalServerError()
+                .json(format!("Unable to acquire the cache layer: {err:#?}"));
+        }
+    };
+
+    let mut blog_post: users::Users = users::Users::default();
+
+    blog_post.set_email(&user.expect("No user found"));
     let post_creator: IndivInput = IndivInput::new(blog_post);
 
     let rendered = match post_creator.render() {

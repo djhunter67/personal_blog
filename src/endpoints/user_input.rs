@@ -688,6 +688,9 @@ pub async fn delete_submission(
     let filter = doc! {
     "_id": input.get_post_id()
     };
+    let sort = doc! {
+    "date": -1
+    };
 
     match journal_entries.find_one_and_delete(filter).await {
         Ok(deleted_entry) => {
@@ -696,7 +699,7 @@ pub async fn delete_submission(
             let filter = mongodb::bson::doc! { "user_id": deleted_entry.as_ref().expect("unable to delete").get_user_id() };
             let mut blog_post: Vec<BlogPost> = Vec::new();
 
-            match journal_entries.find(filter).await {
+            match journal_entries.find(filter).sort(sort).await {
                 //
                 Ok(mut user_cursor) => {
                     tracing::info!("User found!"); //
@@ -1083,6 +1086,9 @@ pub async fn find_active_draft(
 //     }
 // }
 
+/// # Errors
+///
+///    - Returns an error if there is an issue gathering the database items
 pub async fn get_all_posts(
     mongo_client: &Data<mongodb::Client>,
     user_oid: Oid,
@@ -1102,9 +1108,12 @@ pub async fn get_all_posts(
     let filter = mongodb::bson::doc! { "user_id": user_oid.to_string() };
     tracing::warn!("The id to check against: {}", user_oid.to_string());
     let mut blog_post: Vec<BlogPost> = vec![];
+    let sort = mongodb::bson::doc! {
+    "date": -1
+    };
 
     // Each user can have more than one blog post, so we need to find all of them
-    match db.find(filter).await {
+    match db.find(filter).sort(sort).await {
         Ok(mut user_cursor) => {
             tracing::info!("User found!");
 
@@ -1128,9 +1137,9 @@ pub async fn get_all_posts(
 
         Err(err) => {
             tracing::error!("Error accessing the database: {err:#?}");
-            return Err(anyhow::Error::msg(format!(
+            Err(anyhow::Error::msg(format!(
                 "Error accessing the database: {err:#?}"
-            )));
+            )))
         }
     }
 }
