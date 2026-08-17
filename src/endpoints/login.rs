@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tracing::{debug, instrument};
 
 use crate::{
-    endpoints::templates::{self, IndexTemplate},
+    endpoints::templates::{self},
     models::mongo,
     personnel::users,
     security::session::create_session,

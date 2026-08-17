@@ -1,14 +1,6 @@
 /// Business logic lives here
-use actix_web::{HttpRequest, HttpResponse, get, http::header::ContentType, web::Data};
+use actix_web::{HttpResponse, get, http::header::ContentType};
 use askama::Template;
-use redis::{AsyncCommands, aio};
-
-#[derive(Template)]
-#[template(path = "parts/about.part.html")]
-struct AboutTemplate<'a> {
-    content: Vec<&'a str>,
-    user: &'a str,
-}
 
 #[derive(Template)]
 #[template(path = "parts/schedule.part.html")]
@@ -36,24 +28,6 @@ struct FinancesTemplate<'a> {
 struct ContactTemplate<'a> {
     content: Vec<&'a str>,
     user: &'a str,
-}
-
-#[allow(clippy::future_not_send)]
-#[get("/about")]
-pub async fn about(req: HttpRequest, redis_client: Data<aio::ConnectionManager>) -> HttpResponse {
-    tracing::info!("About page loading");
-
-    // let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
-    // let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";
-    // let template = AboutTemplate {
-    //     content: [company_origins, owner_info].to_vec(),
-    //     user: &email,
-    // };
-
-    // let template = template.render().expect("About page render error");
-
-    HttpResponse::Ok().finish()
-    // .body(template)
 }
 
 #[get("/schedule")]

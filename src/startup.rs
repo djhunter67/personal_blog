@@ -113,7 +113,6 @@ async fn run(
             )
             .service(index::index)
             .service(health::health_check)
-            .service(endpoints::bs_logic::about)
             .service(endpoints::bs_logic::schedule)
             .service(endpoints::bs_logic::testimonials)
             .service(endpoints::bs_logic::finances)
