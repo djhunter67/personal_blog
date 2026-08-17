@@ -25,12 +25,13 @@ $pacific-blue: hsla(191, 59%, 55%, 1);
 	flex-direction: row;
 	flex-wrap: wrap;
 	gap: 1em;
+	padding: 0 1em;
 
 	button {
 		grid-row: span;
 		font-size: 2em;
 		background-color: $dark-orange;
-		padding: 1rem 0.25em;
+		// padding: 1rem 0.25em;
 		border: $white 2px solid;
 		border-radius: 2em;
 	}
@@ -42,12 +43,11 @@ $pacific-blue: hsla(191, 59%, 55%, 1);
     align-items: center;
     font-size: 2em;
     text-wrap: wrap;
-    padding: 2em 2em;
 
     img {
 	border-radius: 50%;
 	object-fit: cover;
-	padding-bottom: 1em;
+		   
     }
 
     h1 {
@@ -57,7 +57,6 @@ $pacific-blue: hsla(191, 59%, 55%, 1);
     h3 {
 	color: $blue;
 	text-wrap: wrap;
-	// padding: 0.25em 0;
-	// margin: 0 .25em;
+	padding: 0.5em 0;
     }
 }

@@ -30,6 +30,7 @@
   <body>
     <header id="template__header">
       <nav id="template__header__top">
+	{% include "parts/loading_spinner.html" %}
 	<button
 	  id="template__header__top__home"
 	  hx-get="/"
@@ -65,9 +66,10 @@
 	  hx-target="body"
 	  hx-swap="outerHTML"
 	  hx-trigger="click"
+	  hx-indicator="#loading"	  
 	  >
 	  LOGIN
-	</button>
+	</button>	
 	<button
 	  id="template__header__top__signup"
 	  hx-get="/v1/register"

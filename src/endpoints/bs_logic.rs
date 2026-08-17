@@ -42,50 +42,18 @@ struct ContactTemplate<'a> {
 #[get("/about")]
 pub async fn about(req: HttpRequest, redis_client: Data<aio::ConnectionManager>) -> HttpResponse {
     tracing::info!("About page loading");
-    let session_id = if let Some(cookie) = req.cookie("session_id") {
-        cookie.value().to_string()
-    } else {
-        tracing::error!("User cookie not found: {req:#?}");
-        return HttpResponse::Unauthorized().body(format!(
-            "No session found: {:#?}",
-            req.cookies().expect("No cookies found")
-        ));
-    };
 
-    tracing::info!("Creating the session key");
-    let session_key = format!("session:{session_id}");
+    // let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
+    // let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";
+    // let template = AboutTemplate {
+    //     content: [company_origins, owner_info].to_vec(),
+    //     user: &email,
+    // };
 
-    tracing::info!("Searching for the session key: {session_key}");
-    let user: Option<String> = match redis_client.as_ref().clone().get(&session_key).await {
-        Ok(result) => result,
-        Err(err) => {
-            tracing::error!("Error accessing the cache layer: {err:#?}");
-            return HttpResponse::InternalServerError()
-                .body(format!("Unable to acquire the cache layer: {err:#?}"));
-        }
-    };
+    // let template = template.render().expect("About page render error");
 
-    tracing::debug!("The session id: {session_key}");
-    user.map_or_else(
-        || {
-            tracing::error!("No user data associated with the recieved session key: {session_key}");
-            HttpResponse::InternalServerError().body("No user data found")
-        },
-        |email| {
-            let company_origins: &str = "The company started in Golden Valley, Arizona in 2006";
-            let owner_info: &str = "Nahan Loka is the sole proprietor of SundayLife Services";
-            let template = AboutTemplate {
-                content: [company_origins, owner_info].to_vec(),
-                user: &email,
-            };
-
-            let template = template.render().expect("About page render error");
-
-            HttpResponse::Ok()
-                .content_type(ContentType::html())
-                .body(template)
-        },
-    )
+    HttpResponse::Ok().finish()
+    // .body(template)
 }
 
 #[get("/schedule")]

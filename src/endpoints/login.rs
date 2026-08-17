@@ -47,6 +47,9 @@ pub async fn login_template() -> HttpResponse {
 
     let template = template.render().expect("Login page render error");
 
+    // testing the loading spinner
+    // std::thread::sleep(std::time::Duration::from_secs(5));
+
     HttpResponse::Ok().body(template)
 }
 
@@ -138,16 +141,16 @@ pub async fn login_user(
 
     // THIS RETURN VAL IS TEMPORARY
     tracing::error!("PASSWORD INCORRECT");
-    let default_template = IndexTemplate {
-        user_email: format!("Invalid user entered credentials: {user_email}"),
-        ..Default::default()
-    };
+    // let default_template = IndexTemplate {
+    //     user_email: format!("Invalid user entered credentials: {user_email}"),
+    //     ..Default::default()
+    // };
 
-    let render = default_template
-        .render()
-        .expect("The default render failed");
+    // let render = default_template
+    //     .render()
+    //     .expect("The default render failed");
 
-    HttpResponse::Ok().body(render)
+    HttpResponse::Unauthorized().body("User login Invalid")
 }
 
 async fn cache_miss(
